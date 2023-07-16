@@ -45,9 +45,11 @@ typedef enum DacState {
 typedef struct ThingInfo {
 	char *thingId;
 	DacState dacState;
+	int uplinkChannelBegin;
+	int uplinkChannelEnd;
+	uint8_t uplinkAddressHighByte;
+	uint8_t uplinkAddressLowByte;
 	uint8_t *address;
-	uint8_t *gatewayUplinkAddress;
-	uint8_t *gatewayDownlinkAddress;
 } ThingInfo;
 
 typedef struct ActionProtocolRegistration {
@@ -81,6 +83,7 @@ void registerResetter(void (*reset)());
 void registerTimer(long (*getTime)());
 void registerRadioInitializer(bool (*initializeRadio)(RadioAddress address));
 void registerThingIdGenerator(char *(*generateThingId)());
+void registerRegistrationCodeLoader(char *(*loadRegistrationCode()));
 void registerRadioConfigurer(bool (*configureRadio)());
 void registerRadioAddressChanger(bool (*changeRadioAddress)(RadioAddress address, bool savePersistently));
 void registerThingInfoLoader(void (*loadThingInfo)(ThingInfo *thingInfo));
@@ -106,7 +109,7 @@ void resetThing();
 void getCurrentRadioAddress(RadioAddress address);
 uint8_t getLanId();
 int processReceivedData(uint8_t data[], int dataSize);
-int doDaq(long currentTime);
+int doDaq();
 void sendAndRelease(RadioAddress to, ProtocolData *pData);
 int notify(TinyId requestId, Protocol *event);
 int notifyWithAck(TinyId requestId, Protocol *event);

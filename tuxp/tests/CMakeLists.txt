@@ -6,20 +6,20 @@ add_executable(things_tiny_id_test
 )
 target_include_directories(things_tiny_id_test PRIVATE
 	"${CMAKE_SOURCE_DIR}/Unity"
-	"${CMAKE_SOURCE_DIR}/tacp/src"
+	"${CMAKE_SOURCE_DIR}/tuxp/src"
 )
-target_link_libraries(things_tiny_id_test PRIVATE tacp)
+target_link_libraries(things_tiny_id_test PRIVATE tuxp)
 
 add_test(things_tiny_id_test things_tiny_id_test)
 
-add_executable(tacp_test
-	tacp_test.c
+add_executable(tuxp_test
+	tuxp_test.c
 	${CMAKE_SOURCE_DIR}/Unity/unity.c
 )
-target_include_directories(tacp_test PRIVATE
+target_include_directories(tuxp_test PRIVATE
 	"${CMAKE_SOURCE_DIR}/Unity"
-	"${CMAKE_SOURCE_DIR}/tacp/src"
+	"${CMAKE_SOURCE_DIR}/tuxp/src"
 )
-target_link_libraries(tacp_test PRIVATE tacp)
+target_link_libraries(tuxp_test PRIVATE tuxp)
 
-add_test(tacp_test tacp_test)
+add_test(tuxp_test tuxp_test)

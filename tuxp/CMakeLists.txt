@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 # set the project name and version
-project(tacp VERSION 1.0)
+project(tuxp VERSION 1.0)
 
 # specify the C++ standard
 set(CMAKE_C_STANDARD 90)

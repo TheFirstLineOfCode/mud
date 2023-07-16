@@ -3,13 +3,14 @@
 #include <stdio.h>
 
 #include "debug.h"
-#include "tacp.h"
+#include "tuxp.h"
 #include "thing.h"
 
 static void (*reset)() = NULL;
 static long (*getTime)() = NULL;
 static bool (*initializeRadio)(RadioAddress) = NULL;
 static char *(*generateThingId)() = NULL;
+static char *(*loadRegistrationCode)() = NULL;
 static bool (*configureRadio)() = NULL;
 static bool (*changeRadioAddress)(RadioAddress, bool) = NULL;
 static void (*loadThingInfo)(ThingInfo *) = NULL;
@@ -55,6 +56,10 @@ void registerThingIdGenerator(char *(*_generateThingId)()) {
 	generateThingId = _generateThingId;
 }
 
+void registerRegistrationLoader(char *(*_loadRegistrationCode)()) {
+	loadRegistrationCode = _loadRegistrationCode;
+}
+
 void registerRadioConfigurer(bool (*_configureRadio)()) {
 	configureRadio = _configureRadio;
 }
@@ -82,7 +87,6 @@ void registerRadioDataSender(void (*_sendRadioData)(RadioAddress address, uint8_
 void registerRadioDataReceiver(int (*_receiveRadioData)(uint8_t buff[], int buffSize)) {
 	receiveRadioData = _receiveRadioData;
 }
-
 
 void registerActionProtocol(ProtocolName name,
 			int8_t (*processProtocol)(Protocol *), bool isQueryProtocol) {
@@ -219,31 +223,42 @@ void unregisterThingHooks() {
 	initializeRadio = NULL;
 	configureRadio = NULL;
 	changeRadioAddress = NULL;
+	generateThingId = NULL;
+	loadRegistrationCode = NULL;
 	loadThingInfo = NULL;
 	saveThingInfo = NULL;
 	configureThingProtocols = NULL;
 	sendRadioData = NULL;
 	receiveRadioData = NULL;
 }
+
+void chooseUplinkAddress(RadioAddress chosen) {
+
+}
+
 void sendAndRelease(RadioAddress to, ProtocolData *pData) {
 	sendRadioData(to, pData->data, pData->dataSize);
 	releaseProtocolData(pData);
 }
 
-int introduce(char *thingId) {
+int introduce(char *thingId, char *registrationCode) {
 #if defined(ARDUINO) && defined(ENABLE_DEBUG)
 	Serial.println(F("enter introduce."));
 #else
 	DEBUG_OUT("enter introduce.");
 #endif
 
-	Protocol introduction = createProtocol(NAME_TACP_PROTOCOL_INTRODUCTION);
+	Protocol introduction = createProtocol(NAME_TUXP_PROTOCOL_INTRODUCTION);
 
-	if (addBytesAttribute(&introduction, NAME_ATTRIBUTE_ADDRESS_TACP_PROTOCOL_INTRODUCTION,
+	if(addStringAttribute(&introduction, NAME_ATTRIBUTE_THING_ID_TUXP_PROTOCOL_INTRODUCTION,
+			thingId) != 0)
+		return THING_ERROR_SET_PROTOCOL_ATTRIBUTE;
+
+	if (addBytesAttribute(&introduction, NAME_ATTRIBUTE_ADDRESS_TUXP_PROTOCOL_INTRODUCTION,
 			dacClientAddress,3) != 0)
 		return THING_ERROR_SET_PROTOCOL_ATTRIBUTE;
 
-	if (setText(&introduction, thingId) != 0)
+	if (setText(&introduction, registrationCode) != 0)
 		return THING_ERROR_SET_PROTOCOL_TEXT;
 
 	ProtocolData pData = {NULL, 0};
@@ -270,8 +285,8 @@ int isConfigured(char *thingId) {
 	DEBUG_OUT("enter isConfigured.");
 #endif
 
-	Protocol isConfigured = createProtocol(NAME_TACP_PROTOCOL_IS_CONFIGURED);
-	if(addBytesAttribute(&isConfigured, NAME_ATTRIBUTE_ADDRESS_TACP_PROTOCOL_IS_CONFIGURED,
+	Protocol isConfigured = createProtocol(NAME_TUXP_PROTOCOL_IS_CONFIGURED);
+	if(addBytesAttribute(&isConfigured, NAME_ATTRIBUTE_ADDRESS_TUXP_PROTOCOL_IS_CONFIGURED,
 				dacClientAddress, 3) != 0)
 		return THING_ERROR_SET_PROTOCOL_ATTRIBUTE;
 
@@ -291,6 +306,7 @@ bool checkHooks() {
 	if (loadThingInfo == NULL ||
 			saveThingInfo == NULL ||
 			generateThingId == NULL ||
+			loadRegistrationCode == NULL ||
 			initializeRadio == NULL ||
 			configureRadio == NULL ||
 			changeRadioAddress == NULL ||
@@ -329,7 +345,7 @@ int doDac() {
 	}
 
 	if (thingInfo.dacState == INITIAL) {
-		int result = introduce(thingInfo.thingId);
+		int result = introduce(thingInfo.thingId, loadRegistrationCode());
 		if(result != 0) {
 			thingInfo.dacState = INITIAL;
 			return debugErrorAndReturn("doDac", THING_ERROR_DAC_INTRODUCTION);
@@ -418,8 +434,10 @@ void resetThing() {
 	loadThingInfo(&thingInfo);
 
 	thingInfo.address = NULL;
-	thingInfo.gatewayUplinkAddress = NULL;
-	thingInfo.gatewayDownlinkAddress = NULL;
+	thingInfo.uplinkChannelBegin = -1;
+	thingInfo.uplinkChannelEnd = -1;
+	thingInfo.uplinkAddressHighByte = 0xff;
+	thingInfo.uplinkAddressLowByte = 0xff;
 	thingInfo.dacState = INITIAL;
 
 	saveThingInfo(&thingInfo);
@@ -476,18 +494,18 @@ int processProtocol(uint8_t data[], int size) {
 		Protocol action = createEmptyProtocol();
 		if(parseLanExecution(&pData, requestId, &action) != 0) {
 			releaseProtocol(&action);
-			return TACP_ERROR_FAILED_TO_PARSE_PROTOCOL;
+			return TUXP_ERROR_FAILED_TO_PARSE_PROTOCOL;
 		}
 
 		ActionProtocolRegistration *registration = getActionProtocolRegistration(action.name);
 		if(!registration) {
 			releaseProtocol(&action);
-		 	return TACP_ERROR_UNKNOWN_PROTOCOL_NAME;
+		 	return TUXP_ERROR_UNKNOWN_PROTOCOL_NAME;
 		}
 
 		if(!registration->processProtocol) {
 			releaseProtocol(&action);
-			return TACP_ERROR_NO_REGISTRATED_PROCESSOR;
+			return TUXP_ERROR_NO_REGISTRATED_PROCESSOR;
 		}
 
 		int8_t errorNumber = registration->processProtocol(&action);
@@ -501,18 +519,20 @@ int processProtocol(uint8_t data[], int size) {
 			LanAnswer answer = createLanResonse(requestId);
 			if (translateLanAnswer(&answer, &pDataLanAnswer) != 0) {
 				releaseProtocolData(&pDataLanAnswer);
-				return TACP_ERROR_FAILED_TO_TRANSLATE_ANSWER;
+				return TUXP_ERROR_FAILED_TO_TRANSLATE_ANSWER;
 			}
 		} else {
 			LanAnswer answer = createLanError(requestId, errorNumber);
 
 			if(translateLanAnswer(&answer, &pDataLanAnswer) != 0) {
 				releaseProtocolData(&pDataLanAnswer);
-				return TACP_ERROR_FAILED_TO_TRANSLATE_ANSWER;
+				return TUXP_ERROR_FAILED_TO_TRANSLATE_ANSWER;
 			}
 		}
 
-		sendAndRelease(thingInfo.gatewayUplinkAddress, &pDataLanAnswer);
+		RadioAddress chosen;
+		chooseUplinkAddress(chosen);
+		sendAndRelease(chosen, &pDataLanAnswer);
 		return 0;
 	} else {
 		Protocol protocol;
@@ -525,12 +545,12 @@ int processProtocol(uint8_t data[], int size) {
 		ActionProtocolRegistration *registration = getActionProtocolRegistration(protocol.name);
 		if (!registration) {
 			releaseProtocol(&protocol);
-			return TACP_ERROR_UNKNOWN_PROTOCOL_NAME;
+			return TUXP_ERROR_UNKNOWN_PROTOCOL_NAME;
 		}
 
 		if (!registration->processProtocol) {
 			releaseProtocol(&protocol);
-			return TACP_ERROR_NO_REGISTRATED_PROCESSOR;
+			return TUXP_ERROR_NO_REGISTRATED_PROCESSOR;
 		}
 
 		registration->processProtocol(&protocol);
@@ -550,32 +570,29 @@ int processAsAThing(uint8_t data[], int size) {
 	return processProtocol(data, size);
 }
 
-int allocated(uint8_t *gatewayUplinkAddress, uint8_t *gatewayDownlinkAddress,
-			uint8_t *allocatedAddress) {
+int allocated(int uplinkChannelBegin, int uplinkChannelEnd, uint8_t uplinkAddressHighByte,
+	uint8_t uplinkAddressLowByte, uint8_t *allocatedAddress) {
 #if defined(ARDUINO) && defined(ENABLE_DEBUG)
 	Serial.println(F("enter allocated."));
 #else
 	DEBUG_OUT("enter allocated.");
 #endif
 
-	thingInfo.gatewayUplinkAddress = malloc(sizeof(uint8_t) * gatewayUplinkAddress[0]);
-	thingInfo.gatewayDownlinkAddress = malloc(sizeof(uint8_t) * gatewayDownlinkAddress[0]);
+	thingInfo.uplinkChannelBegin = uplinkChannelBegin;
+	thingInfo.uplinkChannelEnd = uplinkChannelEnd;
+	thingInfo.uplinkAddressHighByte = uplinkAddressHighByte;
+	thingInfo.uplinkAddressLowByte = uplinkAddressLowByte;
+
 	thingInfo.address = malloc(sizeof(uint8_t) * allocatedAddress[0]);
-
-	if (!thingInfo.address ||
-			!thingInfo.gatewayDownlinkAddress ||
-			!thingInfo.gatewayUplinkAddress)
-		return TACP_ERROR_OUT_OF_MEMEORY;
-
-	memcpy(thingInfo.gatewayUplinkAddress, gatewayUplinkAddress + 1, gatewayUplinkAddress[0]);
-	memcpy(thingInfo.gatewayDownlinkAddress, gatewayDownlinkAddress + 1, gatewayDownlinkAddress[0]);
+	if (!thingInfo.address)
+		return TUXP_ERROR_OUT_OF_MEMEORY;
 	memcpy(thingInfo.address, allocatedAddress + 1, allocatedAddress[0]);
 
 	thingInfo.dacState = ALLOCATED;
 
 	saveThingInfo(&thingInfo);
 
-	Protocol allocated = createProtocol(NAME_TACP_PROTOCOL_ALLOCATED);
+	Protocol allocated = createProtocol(NAME_TUXP_PROTOCOL_ALLOCATED);
 	if (setText(&allocated, thingInfo.thingId) != 0)
 		return THING_ERROR_SET_PROTOCOL_TEXT;
 
@@ -597,19 +614,31 @@ int processAllocation(Protocol *allocation) {
 	DEBUG_OUT("enter processAllocation.");
 #endif
 
-	uint8_t *gatewayUplinkAddress = getBytesAttributeValue(allocation, NAME_ATTRIBUTE_GATEWAY_UPLINK_ADDRESS_TACP_PROTOCOL_ALLOCATION);
-	uint8_t *gatewayDownlinkAddress = getBytesAttributeValue(allocation, NAME_ATTRIBUTE_GATEWAY_DOWNLINK_ADDRESS_TACP_PROTOCOL_ALLOCATION);
-	uint8_t *allocatedAddress = getBytesAttributeValue(allocation, NAME_ATTRIBUTE_ALLOCATED_ADDRESS_TACP_PROTOCOL_ALLOCATION);
+	int uplinkChannelBegin;
+	if (!getIntAttributeValue(allocation, NAME_ATTRIBUTE_UPLINK_CHANNEL_BEGIN_TUXP_PROTOCOL_ALLOCATION, &uplinkChannelBegin))
+		return TUXP_ERROR_LACK_OF_ALLOCATION_PARAMETERS;
 
-	if (!gatewayUplinkAddress || !gatewayDownlinkAddress || !allocatedAddress)
-		return TACP_ERROR_LACK_OF_ALLOCATION_PARAMETERS;
+	int uplinkChannelEnd;
+	if(!getIntAttributeValue(allocation, NAME_ATTRIBUTE_UPLINK_CHANNEL_END_TUXP_PROTOCOL_ALLOCATION, &uplinkChannelEnd))
+		return TUXP_ERROR_LACK_OF_ALLOCATION_PARAMETERS;
 
-	if (gatewayUplinkAddress[0] != SIZE_RADIO_ADDRESS ||
-			gatewayDownlinkAddress[0] != SIZE_RADIO_ADDRESS ||
-				allocatedAddress[0] != SIZE_RADIO_ADDRESS)
-		return TACP_ERROR_ILLEGAL_ALLOCATED_ADDRESS;
+	uint8_t uplinkAddressHighByte;
+	if (!getByteAttributeValue(allocation, NAME_ATTRIBUTE_UPLINK_ADDRESS_HIGH_BYTE_TUXP_PROTOCOL_ALLOCATION, uplinkAddressHighByte))
+		return TUXP_ERROR_LACK_OF_ALLOCATION_PARAMETERS;
 
-	return allocated(gatewayUplinkAddress, gatewayDownlinkAddress, allocatedAddress);
+	uint8_t uplinkAddressLowByte;
+	if(!getByteAttributeValue(allocation, NAME_ATTRIBUTE_UPLINK_ADDRESS_LOW_BYTE_TUXP_PROTOCOL_ALLOCATION, uplinkAddressLowByte))
+		return TUXP_ERROR_LACK_OF_ALLOCATION_PARAMETERS;
+
+	uint8_t *allocatedAddress = getBytesAttributeValue(allocation, NAME_ATTRIBUTE_ALLOCATED_ADDRESS_TUXP_PROTOCOL_ALLOCATION);
+	if (!allocatedAddress)
+		return TUXP_ERROR_LACK_OF_ALLOCATION_PARAMETERS;
+
+	if (allocatedAddress[0] != SIZE_RADIO_ADDRESS)
+		return TUXP_ERROR_ILLEGAL_ALLOCATED_ADDRESS;
+
+	return allocated(uplinkChannelBegin, uplinkChannelEnd,
+		uplinkAddressHighByte, uplinkAddressLowByte, allocatedAddress);
 }
 
 void processNotConfigured() {
@@ -619,8 +648,10 @@ void processNotConfigured() {
 	DEBUG_OUT("enter processNotConfigured.");
 #endif
 
-	thingInfo.gatewayUplinkAddress = NULL;
-	thingInfo.gatewayDownlinkAddress = NULL;
+	thingInfo.uplinkChannelBegin = -1;
+	thingInfo.uplinkChannelEnd = -1;
+	thingInfo.uplinkAddressHighByte = 0xff;
+	thingInfo.uplinkAddressLowByte = 0xff;
 	thingInfo.address = NULL;
 	thingInfo.dacState = INITIAL;
 
@@ -674,8 +705,8 @@ int processDac(uint8_t data[], int size) {
 	ProtocolData pData = {data, size};
 
 	if (thingInfo.dacState == INTRODUCTING) {
-		if (!isProtocol(&pData, NAME_TACP_PROTOCOL_ALLOCATION)) {
-			return debugErrorAndReturn("processDac", TACP_ERROR_NOT_SUITABLE_DAC_PROTOCOL);
+		if (!isProtocol(&pData, NAME_TUXP_PROTOCOL_ALLOCATION)) {
+			return debugErrorAndReturn("processDac", TUXP_ERROR_NOT_SUITABLE_DAC_PROTOCOL);
 		}
 
 		Protocol allocation = createEmptyProtocol();
@@ -683,7 +714,7 @@ int processDac(uint8_t data[], int size) {
 		int result = parseProtocol(&pData, &allocation);
 		if (result != 0) {
 			releaseProtocol(&allocation);
-			return debugErrorAndReturn("processDac", TACP_ERROR_FAILED_TO_PARSE_PROTOCOL);
+			return debugErrorAndReturn("processDac", TUXP_ERROR_FAILED_TO_PARSE_PROTOCOL);
 		}
 
 		result = processAllocation(&allocation);
@@ -693,19 +724,19 @@ int processDac(uint8_t data[], int size) {
 
 		return 0;
 	} else if (thingInfo.dacState == ALLOCATED) {
-		if (isBareProtocol(&pData, NAME_TACP_PROTOCOL_NOT_CONFIGURED)) {
+		if (isBareProtocol(&pData, NAME_TUXP_PROTOCOL_NOT_CONFIGURED)) {
 			processNotConfigured();
 			return 0;
-		} else if (isBareProtocol(&pData, NAME_TACP_PROTOCOL_CONFIGURED)) {
+		} else if (isBareProtocol(&pData, NAME_TUXP_PROTOCOL_CONFIGURED)) {
 			if (!processConfigured())
 				return debugErrorAndReturn("processDac", THING_ERROR_CHANGE_RADIO_ADDRESS);
 
 			return 0;
 		} else {
-			return debugErrorAndReturn("processDac", TACP_ERROR_NOT_SUITABLE_DAC_PROTOCOL);
+			return debugErrorAndReturn("processDac", TUXP_ERROR_NOT_SUITABLE_DAC_PROTOCOL);
 		}
 	} else {
-		return TACP_ERROR_INVALID_DAC_STATE;
+		return TUXP_ERROR_INVALID_DAC_STATE;
 	}
 
 	return 0;
@@ -719,11 +750,11 @@ int processReceivedData(uint8_t data[], int dataSize) {
 #endif
 
 	if(dataSize > MAX_SIZE_PROTOCOL_DATA * 2)
-		return TACP_ERROR_PROTOCOL_DATA_TOO_LARGE;
+		return TUXP_ERROR_PROTOCOL_DATA_TOO_LARGE;
 
 	if(messagesLength + dataSize > MAX_SIZE_PROTOCOL_DATA * 2) {
 		cleanMessages();
-		return TACP_ERROR_MESSAGES_BUFF_OVERFLOW;
+		return TUXP_ERROR_MESSAGES_BUFF_OVERFLOW;
 	}
 
 	memcpy(messages + messagesLength, data, dataSize);
@@ -732,12 +763,12 @@ int processReceivedData(uint8_t data[], int dataSize) {
 	int protocolStartPosition = findProtocolStartPosition();
 	if(protocolStartPosition == -1) {
 		cleanMessages();
-		return TACP_ERROR_ABANDON_MALFORMED_DATA;
+		return TUXP_ERROR_ABANDON_MALFORMED_DATA;
 	}
 
 	int protocolEndPosition = findProtocolEndPosition(protocolStartPosition);
 	if(protocolEndPosition == -1)
-		return TACP_ERROR_WAITING_DATA;
+		return TUXP_ERROR_WAITING_DATA;
 
 #if defined(ARDUINO) && defined(ENABLE_DEBUG)
 	Serial.println(F("Found a protocol. Process it."));
@@ -782,7 +813,9 @@ int notify(TinyId requestId, Protocol *event) {
 		return debugErrorDetailAndReturn("notify", THING_ERROR_PROTOCOL_TRANSLATION, result);
 	}
 
-	sendAndRelease(thingInfo.gatewayUplinkAddress, &pData);
+	RadioAddress chosen;
+	chooseUplinkAddress(chosen);
+	sendAndRelease(chosen, &pData);
 
 	return 0;
 }
@@ -808,7 +841,9 @@ int report(TinyId requestId, Protocol *data) {
 		return debugErrorDetailAndReturn("report", THING_ERROR_PROTOCOL_TRANSLATION, result);
 	}
 
-	sendAndRelease(thingInfo.gatewayUplinkAddress, &pData);
+	RadioAddress chosen;
+	chooseUplinkAddress(chosen);
+	sendAndRelease(chosen, &pData);
 
 	return 0;
 }

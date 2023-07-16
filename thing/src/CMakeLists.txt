@@ -5,8 +5,8 @@ add_library(thing STATIC
 	thing.c
 )
 
-target_link_libraries(thing PUBLIC tacp)
+target_link_libraries(thing PUBLIC tuxp)
 
 target_include_directories(thing PUBLIC
-	"${CMAKE_SOURCE_DIR}/tacp/src"
+	"${CMAKE_SOURCE_DIR}/tuxp/src"
 )

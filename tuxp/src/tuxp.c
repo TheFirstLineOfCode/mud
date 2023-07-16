@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 #include "debug.h"
-#include "tacp.h"
+#include "tuxp.h"
 
 #define MIN_SIZE_PROTOCOL_DATA 2 + 3
 #define MIN_SIZE_LAN_EXECUTION_DATA MIN_SIZE_PROTOCOL_DATA + (SIZE_THINGS_TINY_ID + 2) + 5
@@ -66,10 +66,10 @@ void addAttributeToProtocol(Protocol *protocol, ProtocolAttribute *attribute) {
 
 int addBytesAttribute(Protocol *protocol, uint8_t name, uint8_t bytes[], int size) {
 	if (protocol->text)
-		return debugErrorAndReturn("addBytesAttribute", TACP_ERROR_PROTOCOL_CHANGE_CLOSED);
+		return debugErrorAndReturn("addBytesAttribute", TUXP_ERROR_PROTOCOL_CHANGE_CLOSED);
 
 	if (size > MAX_SIZE_ATTRIBUTE_DATA)
-		return debugErrorAndReturn("addBytesAttribute", TACP_ERROR_ATTRIBUTE_DATA_TOO_LARGE);
+		return debugErrorAndReturn("addBytesAttribute", TUXP_ERROR_ATTRIBUTE_DATA_TOO_LARGE);
 
 	ProtocolAttribute *attribute = malloc(sizeof(ProtocolAttribute));
 	attribute->name = name;
@@ -77,7 +77,7 @@ int addBytesAttribute(Protocol *protocol, uint8_t name, uint8_t bytes[], int siz
 
 	attribute->value.bsValue = malloc((size + 1) * sizeof(uint8_t));
 	if (!attribute->value.bsValue)
-		return debugErrorAndReturn("addBytesAttribute", TACP_ERROR_OUT_OF_MEMEORY);
+		return debugErrorAndReturn("addBytesAttribute", TUXP_ERROR_OUT_OF_MEMEORY);
 	*(attribute->value.bsValue) = (uint8_t)size;
 	memcpy(attribute->value.bsValue + 1, bytes, size);
 
@@ -87,11 +87,11 @@ int addBytesAttribute(Protocol *protocol, uint8_t name, uint8_t bytes[], int siz
 
 int addStringAttribute(Protocol *protocol, uint8_t name, char string[]) {
 	if(protocol->text)
-		return debugErrorAndReturn("addStringAttribute", TACP_ERROR_PROTOCOL_CHANGE_CLOSED);
+		return debugErrorAndReturn("addStringAttribute", TUXP_ERROR_PROTOCOL_CHANGE_CLOSED);
 
 	int length = strlen(string);
 	if (length > MAX_SIZE_ATTRIBUTE_DATA)
-		return debugErrorAndReturn("addStringAttribute", TACP_ERROR_ATTRIBUTE_DATA_TOO_LARGE);
+		return debugErrorAndReturn("addStringAttribute", TUXP_ERROR_ATTRIBUTE_DATA_TOO_LARGE);
 		
 	ProtocolAttribute *attribute = malloc(sizeof(ProtocolAttribute));
 	attribute->name = name;
@@ -99,7 +99,7 @@ int addStringAttribute(Protocol *protocol, uint8_t name, char string[]) {
 
 	attribute->value.csValue = malloc((strlen(string) + 1) * sizeof(char));
 	if (!attribute->value.csValue)
-		return debugErrorAndReturn("addStringAttribute", TACP_ERROR_OUT_OF_MEMEORY);	
+		return debugErrorAndReturn("addStringAttribute", TUXP_ERROR_OUT_OF_MEMEORY);	
 	strcpy(attribute->value.csValue, string);
 
 	addAttributeToProtocol(protocol, attribute);
@@ -108,7 +108,7 @@ int addStringAttribute(Protocol *protocol, uint8_t name, char string[]) {
 
 int addByteAttribute(Protocol *protocol, uint8_t name, uint8_t bValue) {
 	if(protocol->text)
-		return debugErrorAndReturn("addByteAttribute", TACP_ERROR_PROTOCOL_CHANGE_CLOSED);
+		return debugErrorAndReturn("addByteAttribute", TUXP_ERROR_PROTOCOL_CHANGE_CLOSED);
 
 	ProtocolAttribute *attribute = malloc(sizeof(ProtocolAttribute));
 
@@ -123,7 +123,7 @@ int addByteAttribute(Protocol *protocol, uint8_t name, uint8_t bValue) {
 
 int addIntAttribute(Protocol *protocol, uint8_t name, int iValue) {
 	if(protocol->text)
-		return debugErrorAndReturn("addIntAttribute", TACP_ERROR_PROTOCOL_CHANGE_CLOSED);
+		return debugErrorAndReturn("addIntAttribute", TUXP_ERROR_PROTOCOL_CHANGE_CLOSED);
 	
 	ProtocolAttribute *attribute = malloc(sizeof(ProtocolAttribute));
 
@@ -134,7 +134,7 @@ int addIntAttribute(Protocol *protocol, uint8_t name, int iValue) {
 	sprintf(charsData, "%d", iValue);
 	attribute->value.csValue = malloc(sizeof(char) * (strlen(charsData) + 1));
 	if(!attribute->value.csValue)
-		return debugErrorAndReturn("addIntAttribute", TACP_ERROR_OUT_OF_MEMEORY);
+		return debugErrorAndReturn("addIntAttribute", TUXP_ERROR_OUT_OF_MEMEORY);
 	strcpy(attribute->value.csValue, charsData);
 
 	addAttributeToProtocol(protocol, attribute);
@@ -143,7 +143,7 @@ int addIntAttribute(Protocol *protocol, uint8_t name, int iValue) {
 
 int addFloatAttribute(Protocol *protocol, uint8_t name, float fValue) {
 	if(protocol->text)
-		return debugErrorAndReturn("addFloatAttribute", TACP_ERROR_PROTOCOL_CHANGE_CLOSED);
+		return debugErrorAndReturn("addFloatAttribute", TUXP_ERROR_PROTOCOL_CHANGE_CLOSED);
 	
 	ProtocolAttribute *attribute = malloc(sizeof(ProtocolAttribute));
 
@@ -169,7 +169,7 @@ int addFloatAttribute(Protocol *protocol, uint8_t name, float fValue) {
 
 	attribute->value.csValue = malloc(sizeof(char) * (strlen(charsData) + 1));
 	if(!attribute->value.csValue)
-		return debugErrorAndReturn("addFloatAttribute", TACP_ERROR_OUT_OF_MEMEORY);
+		return debugErrorAndReturn("addFloatAttribute", TUXP_ERROR_OUT_OF_MEMEORY);
 	strcpy(attribute->value.csValue, charsData);
 	
 	addAttributeToProtocol(protocol, attribute);
@@ -178,7 +178,7 @@ int addFloatAttribute(Protocol *protocol, uint8_t name, float fValue) {
 
 int addRbsAttribute(Protocol *protocol, uint8_t name, uint8_t rbsValue) {
 	if(protocol->text)
-		return debugErrorAndReturn("addByteAttribute", TACP_ERROR_PROTOCOL_CHANGE_CLOSED);
+		return debugErrorAndReturn("addByteAttribute", TUXP_ERROR_PROTOCOL_CHANGE_CLOSED);
 
 	ProtocolAttribute *attribute = malloc(sizeof(ProtocolAttribute));
 
@@ -193,14 +193,14 @@ int addRbsAttribute(Protocol *protocol, uint8_t name, uint8_t rbsValue) {
 
 int setText(Protocol *protocol, char *text) {
 	if(protocol->text)
-		return debugErrorAndReturn("setText", TACP_ERROR_PROTOCOL_CHANGE_CLOSED);
+		return debugErrorAndReturn("setText", TUXP_ERROR_PROTOCOL_CHANGE_CLOSED);
 
 	if (strlen(text) > MAX_SIZE_TEXT_DATA)
-		return debugErrorAndReturn("setText", TACP_ERROR_TEXT_DATA_TOO_LARGE);
+		return debugErrorAndReturn("setText", TUXP_ERROR_TEXT_DATA_TOO_LARGE);
 
 	protocol->text = malloc(sizeof(char) * (strlen(text) + 1));
 	if (!protocol->text)
-		return debugErrorAndReturn("setText", TACP_ERROR_OUT_OF_MEMEORY);
+		return debugErrorAndReturn("setText", TUXP_ERROR_OUT_OF_MEMEORY);
 
 	strcpy(protocol->text, text);
 	return 0;
@@ -208,13 +208,13 @@ int setText(Protocol *protocol, char *text) {
 
 int escape(uint8_t data[], int size, ProtocolData *pData) {
 	if (size > MAX_SIZE_ATTRIBUTE_DATA)
-		return TACP_ERROR_ATTRIBUTE_DATA_TOO_LARGE;
+		return TUXP_ERROR_ATTRIBUTE_DATA_TOO_LARGE;
 
 	int position = 0;
 	uint8_t buff[MAX_SIZE_ATTRIBUTE_DATA];
 	for (int i = 0; i < size; i++) {
 		if (position > MAX_SIZE_ATTRIBUTE_DATA)
-			return TACP_ERROR_ATTRIBUTE_DATA_TOO_LARGE;
+			return TUXP_ERROR_ATTRIBUTE_DATA_TOO_LARGE;
 
 		if (data[i] == FLAG_DOC_BEGINNING_END ||
 				data[i] == FLAG_UNIT_SPLITTER ||
@@ -232,7 +232,7 @@ int escape(uint8_t data[], int size, ProtocolData *pData) {
 	if (position == 1) {
 		pData->data = malloc(sizeof(uint8_t) * 2);
 		if (!pData->data)
-			return TACP_ERROR_OUT_OF_MEMEORY;
+			return TUXP_ERROR_OUT_OF_MEMEORY;
 
 		pData->data[1] = buff[0];
 		pData->data[0] = FLAG_NOREPLACE;
@@ -240,7 +240,7 @@ int escape(uint8_t data[], int size, ProtocolData *pData) {
 	} else {
 		pData->data = malloc(sizeof(uint8_t) * position);
 		if(!pData->data)
-			return TACP_ERROR_OUT_OF_MEMEORY;
+			return TUXP_ERROR_OUT_OF_MEMEORY;
 
 		memcpy(pData->data, buff, position);
 		pData->dataSize = position;
@@ -255,7 +255,7 @@ bool isEscapedByte(uint8_t b) {
 
 int unescape(uint8_t data[], int size, ProtocolData *pData) {
 	if (size > MAX_SIZE_ATTRIBUTE_DATA)
-		return TACP_ERROR_ATTRIBUTE_DATA_TOO_LARGE;
+		return TUXP_ERROR_ATTRIBUTE_DATA_TOO_LARGE;
 
 	int position = 0;
 	uint8_t buff[MAX_SIZE_ATTRIBUTE_DATA];
@@ -271,14 +271,14 @@ int unescape(uint8_t data[], int size, ProtocolData *pData) {
 	if (position == 1) {
 		pData->data = malloc(sizeof(uint8_t) * 1);
 		if (!pData->data)
-			return TACP_ERROR_OUT_OF_MEMEORY;
+			return TUXP_ERROR_OUT_OF_MEMEORY;
 
 		pData->data[0] = buff[0];
 		pData->dataSize = 1;
 	} else if (buff[0] == FLAG_BYTES_TYPE) {
 		pData->data = malloc(sizeof(uint8_t) * (position - 1));
 		if(!pData->data)
-			return TACP_ERROR_OUT_OF_MEMEORY;
+			return TUXP_ERROR_OUT_OF_MEMEORY;
 
 		memcpy(pData->data, buff + 1, position - 1);
 		pData->dataSize = position - 1;
@@ -286,14 +286,14 @@ int unescape(uint8_t data[], int size, ProtocolData *pData) {
 				(position == 2 && buff[0] == FLAG_NOREPLACE)) {
 		pData->data = malloc(sizeof(uint8_t) * 1);
 		if(!pData->data)
-			return TACP_ERROR_OUT_OF_MEMEORY;
+			return TUXP_ERROR_OUT_OF_MEMEORY;
 
 		pData->data[0] = buff[1];
 		pData->dataSize = 1;
 	} else {
 		pData->data = malloc(sizeof(uint8_t) * position);
 		if(!pData->data)
-			return TACP_ERROR_OUT_OF_MEMEORY;
+			return TUXP_ERROR_OUT_OF_MEMEORY;
 
 		memcpy(pData->data, buff, position);
 		pData->dataSize = position;
@@ -361,7 +361,7 @@ int assembleProtocolAttributeValue(ProtocolData *pData, ProtocolAttribute *attri
 	uint8_t firstByteOfAttribute = pData->data[attributeValueStartPosition];
 	if (firstByteOfAttribute == FLAG_BYTE_TYPE) {
 		if (escapeNumber > 1)
-			return TACP_ERROR_MALFORMED_PROTOCOL_DATA;
+			return TUXP_ERROR_MALFORMED_PROTOCOL_DATA;
 
 		attribute->dataType = TYPE_BYTE;
 		if (escapeNumber == 0) {
@@ -378,7 +378,7 @@ int assembleProtocolAttributeValue(ProtocolData *pData, ProtocolAttribute *attri
 			releaseProtocolData(&unescapedValue);
 
 			return debugErrorDetailAndReturn("assembleProtocolAttributeValue",
-				TACP_ERROR_FAILED_TO_UNESCAPE, unescapeResult);
+				TUXP_ERROR_FAILED_TO_UNESCAPE, unescapeResult);
 		}
 
 		if(unescapedValue.dataSize == 1 &&
@@ -389,7 +389,7 @@ int assembleProtocolAttributeValue(ProtocolData *pData, ProtocolAttribute *attri
 			attribute->value.bsValue = malloc(sizeof(uint8_t) * (unescapedValue.dataSize + 1));
 			if(!attribute->value.bsValue) {
 				releaseProtocolData(&unescapedValue);
-				return TACP_ERROR_OUT_OF_MEMEORY;
+				return TUXP_ERROR_OUT_OF_MEMEORY;
 			}
 
 			attribute->dataType = TYPE_BYTES;
@@ -399,7 +399,7 @@ int assembleProtocolAttributeValue(ProtocolData *pData, ProtocolAttribute *attri
 			attribute->value.csValue = malloc(sizeof(char) * (unescapedValue.dataSize + 1));
 			if(!attribute->value.csValue) {
 				releaseProtocolData(&unescapedValue);
-				return TACP_ERROR_OUT_OF_MEMEORY;
+				return TUXP_ERROR_OUT_OF_MEMEORY;
 			}
 
 			attribute->dataType = TYPE_CHARS;
@@ -431,7 +431,7 @@ int doParseProtocol(ProtocolData *pData, Protocol *protocol) {
 	protocol->text = NULL;
 
 	if (!isValidProtocolData(pData))
-		return TACP_ERROR_NOT_VALID_PROTOCOL;
+		return TUXP_ERROR_NOT_VALID_PROTOCOL;
 
 	// Is a bare protocol data.
 	if (pData->dataSize == 5) {
@@ -443,11 +443,11 @@ int doParseProtocol(ProtocolData *pData, Protocol *protocol) {
 	}
 
 	if (pData->dataSize < (MIN_SIZE_PROTOCOL_DATA + 2))
-		return TACP_ERROR_MALFORMED_PROTOCOL_DATA;
+		return TUXP_ERROR_MALFORMED_PROTOCOL_DATA;
 
 	uint8_t childrenSize = pData->data[5] & 0x7f;
 	if (childrenSize > 0)
-		return TACP_ERROR_FEATURE_EMBEDDED_PROTOCOL_NOT_IMPLEMENTED;
+		return TUXP_ERROR_FEATURE_CHILD_ELEMENT_NOT_IMPLEMENTED;
 
 	ProtocolName name = {
 		{pData->data[1], pData->data[2]},
@@ -462,7 +462,7 @@ int doParseProtocol(ProtocolData *pData, Protocol *protocol) {
 
 	if (attributeSize == 0 && !hasText) {
 		if (pData->dataSize != MIN_SIZE_PROTOCOL_DATA + 2)
-			return TACP_ERROR_MALFORMED_PROTOCOL_DATA;
+			return TUXP_ERROR_MALFORMED_PROTOCOL_DATA;
 
 		return 0;
 	}
@@ -470,11 +470,11 @@ int doParseProtocol(ProtocolData *pData, Protocol *protocol) {
 	int position = 5;
 	for (int i = 0; i < attributeSize; i++) {
 		if (position++ >= (pData->dataSize - 1))
-			return TACP_ERROR_MALFORMED_PROTOCOL_DATA;
+			return TUXP_ERROR_MALFORMED_PROTOCOL_DATA;
 
 		ProtocolAttribute *attribute = malloc(sizeof(ProtocolAttribute));
 		if (!attribute)
-			return TACP_ERROR_OUT_OF_MEMEORY;
+			return TUXP_ERROR_OUT_OF_MEMEORY;
 
 		attribute->name = pData->data[position];
 
@@ -483,13 +483,13 @@ int doParseProtocol(ProtocolData *pData, Protocol *protocol) {
 		int attributeValueEndPosition = findAttributeValueEnd(pData, position, &escapeNumber);
 		if (attributeValueEndPosition <= 0) {
 			free(attribute);
-			return TACP_ERROR_MALFORMED_PROTOCOL_DATA;
+			return TUXP_ERROR_MALFORMED_PROTOCOL_DATA;
 		}
 
 		if (assembleProtocolAttributeValue(pData, attribute, position,
 				attributeValueEndPosition, escapeNumber) != 0) {
 			free(attribute);
-			return TACP_ERROR_FAILED_TO_ASSEMBLE_PROTOCOL_ATTRIBUTE;
+			return TUXP_ERROR_FAILED_TO_ASSEMBLE_PROTOCOL_ATTRIBUTE;
 		}
 
 		position = attributeValueEndPosition;
@@ -497,7 +497,7 @@ int doParseProtocol(ProtocolData *pData, Protocol *protocol) {
 	}
 
 	if (!hasText && (position != (pData->dataSize - 1))) {
-		return TACP_ERROR_MALFORMED_PROTOCOL_DATA;
+		return TUXP_ERROR_MALFORMED_PROTOCOL_DATA;
 	}
 
 	if (!hasText)
@@ -509,12 +509,12 @@ int doParseProtocol(ProtocolData *pData, Protocol *protocol) {
 	int unescapeResult = unescape(pData->data + position, textDataSize, &textData);
 	if (unescapeResult != 0) {
 		releaseProtocolData(&textData);
-		return debugErrorDetailAndReturn("doParseProtocol", TACP_ERROR_FAILED_TO_UNESCAPE, unescapeResult);
+		return debugErrorDetailAndReturn("doParseProtocol", TUXP_ERROR_FAILED_TO_UNESCAPE, unescapeResult);
 	}
 
 	char *text = malloc(sizeof(char) * (textDataSize + 1));
 	if(!text)
-		return TACP_ERROR_OUT_OF_MEMEORY;
+		return TUXP_ERROR_OUT_OF_MEMEORY;
 
 	memcpy(text, textData.data, textDataSize);
 	*(text + textDataSize) = 0;
@@ -588,14 +588,14 @@ void releaseProtocolData(ProtocolData *pData) {
 
 int translateProtocol(Protocol *protocol, ProtocolData *pData) {
 	if (getAttributesSize(protocol) > MAX_SIZE_ATTRIBUTES)
-		return debugErrorAndReturn("translateProtocol", TACP_ERROR_TOO_MANY_ATTRIBUTES);
+		return debugErrorAndReturn("translateProtocol", TUXP_ERROR_TOO_MANY_ATTRIBUTES);
 
 	// It's a bare protocol.
 	if (getAttributesSize(protocol) == 0 && !protocol->text) {
 		pData->dataSize = MIN_SIZE_PROTOCOL_DATA;
 		pData->data = malloc(sizeof(uint8_t) * MIN_SIZE_PROTOCOL_DATA);
 		if (!pData->data)
-			return TACP_ERROR_OUT_OF_MEMEORY;
+			return TUXP_ERROR_OUT_OF_MEMEORY;
 
 		pData->data[0] = 0xff;
 		pData->data[1] = protocol->name.ns[0];
@@ -621,13 +621,13 @@ int translateProtocol(Protocol *protocol, ProtocolData *pData) {
 	ProtocolAttribute *attribute = protocol->attributes;
 	while (attribute) {
 		if (position >= MAX_SIZE_PROTOCOL_DATA - 1)
-			return debugErrorAndReturn("translateProtocol", TACP_ERROR_PROTOCOL_DATA_TOO_LARGE);
+			return debugErrorAndReturn("translateProtocol", TUXP_ERROR_PROTOCOL_DATA_TOO_LARGE);
 
 		buff[position] = attribute->name;
 		position++;
 
 		if(position >= MAX_SIZE_PROTOCOL_DATA - 1)
-			return debugErrorAndReturn("translateProtocol", TACP_ERROR_PROTOCOL_DATA_TOO_LARGE);
+			return debugErrorAndReturn("translateProtocol", TUXP_ERROR_PROTOCOL_DATA_TOO_LARGE);
 
 		ProtocolData attributeData;
 		int escapeResult = 0;
@@ -662,7 +662,7 @@ int translateProtocol(Protocol *protocol, ProtocolData *pData) {
 
 		if (escapeResult != 0) {
 			releaseProtocolData(&attributeData);
-			return debugErrorDetailAndReturn("translateProtocol", TACP_ERROR_FAILED_TO_TRANSLATE_PROTOCOL, escapeResult);
+			return debugErrorDetailAndReturn("translateProtocol", TUXP_ERROR_FAILED_TO_TRANSLATE_PROTOCOL, escapeResult);
 		} else if (attribute->dataType == TYPE_BYTE) {
 			buff[position] = FLAG_BYTE_TYPE;
 			position++;
@@ -675,12 +675,12 @@ int translateProtocol(Protocol *protocol, ProtocolData *pData) {
 
 		if (position >= MAX_SIZE_PROTOCOL_DATA - 1) {
 			releaseProtocolData(&attributeData);
-			return debugErrorAndReturn("translateProtocol", TACP_ERROR_PROTOCOL_DATA_TOO_LARGE);
+			return debugErrorAndReturn("translateProtocol", TUXP_ERROR_PROTOCOL_DATA_TOO_LARGE);
 		}
 
 		if (position + attributeData.dataSize >= MAX_SIZE_PROTOCOL_DATA - 1) {
 			releaseProtocolData(&attributeData);
-			return debugErrorAndReturn("translateProtocol", TACP_ERROR_PROTOCOL_DATA_TOO_LARGE);
+			return debugErrorAndReturn("translateProtocol", TUXP_ERROR_PROTOCOL_DATA_TOO_LARGE);
 		}
 
 		memcpy(buff + position, attributeData.data, attributeData.dataSize);
@@ -691,7 +691,7 @@ int translateProtocol(Protocol *protocol, ProtocolData *pData) {
 		
 		if (position >= MAX_SIZE_PROTOCOL_DATA - 1) {
 			releaseProtocolData(&attributeData);
-			return debugErrorAndReturn("translateProtocol", TACP_ERROR_PROTOCOL_DATA_TOO_LARGE);
+			return debugErrorAndReturn("translateProtocol", TUXP_ERROR_PROTOCOL_DATA_TOO_LARGE);
 		}
 
 		releaseProtocolData(&attributeData);
@@ -702,7 +702,7 @@ int translateProtocol(Protocol *protocol, ProtocolData *pData) {
 	if (protocol->text) {
 		int textSize = strlen(protocol->text);
 		if (position + textSize >= MAX_SIZE_PROTOCOL_DATA - 1)
-			return debugErrorAndReturn("translateProtocol", TACP_ERROR_PROTOCOL_DATA_TOO_LARGE);
+			return debugErrorAndReturn("translateProtocol", TUXP_ERROR_PROTOCOL_DATA_TOO_LARGE);
 
 		memcpy(buff + position, protocol->text, textSize);
 		position += textSize;
@@ -714,7 +714,7 @@ int translateProtocol(Protocol *protocol, ProtocolData *pData) {
 		dataSize = position;
 	} else {
 		if (position >= MAX_SIZE_PROTOCOL_DATA - 1)
-			return debugErrorAndReturn("translateProtocol", TACP_ERROR_PROTOCOL_DATA_TOO_LARGE);
+			return debugErrorAndReturn("translateProtocol", TUXP_ERROR_PROTOCOL_DATA_TOO_LARGE);
 
 		buff[position] = FLAG_DOC_BEGINNING_END;
 		dataSize = position + 1;
@@ -725,7 +725,7 @@ int translateProtocol(Protocol *protocol, ProtocolData *pData) {
 
 	pData->data = malloc(dataSize * sizeof(uint8_t));
 	if (!pData->data)
-		return debugErrorAndReturn("translateProtocol", TACP_ERROR_OUT_OF_MEMEORY);
+		return debugErrorAndReturn("translateProtocol", TUXP_ERROR_OUT_OF_MEMEORY);
 
 	memcpy(pData->data, buff, dataSize);
 	pData->dataSize = dataSize;
@@ -743,18 +743,18 @@ int translateAndRelease(Protocol *protocol, ProtocolData *pData) {
 int translateLanExecution(TinyId requestId, Protocol *action, ProtocolData *pData) {
 	ProtocolData pDataAction;
 	if (translateProtocol(action, &pDataAction) != 0)
-		return debugErrorAndReturn("translateLanExecution", TACP_ERROR_FAILED_TO_TRANSLATE_PROTOCOL);
+		return debugErrorAndReturn("translateLanExecution", TUXP_ERROR_FAILED_TO_TRANSLATE_PROTOCOL);
 
 	ProtocolData pDataEscapedTinyId;
 	int escapeResult = escape(requestId, SIZE_THINGS_TINY_ID, &pDataEscapedTinyId);
 	if (escapeResult != 0) {
-		return debugErrorDetailAndReturn("translateLanExecution", TACP_ERROR_FAILED_TO_ESCAPE, escapeResult);
+		return debugErrorDetailAndReturn("translateLanExecution", TUXP_ERROR_FAILED_TO_ESCAPE, escapeResult);
 	}
 
 	int pDataActionSize = pDataAction.dataSize - 2;
 	int lanExecutionSize = MIN_SIZE_PROTOCOL_DATA + 3 + pDataEscapedTinyId.dataSize + pDataActionSize;
 	if (lanExecutionSize > MAX_SIZE_PROTOCOL_DATA)
-		return debugErrorAndReturn("translateLanExecution", TACP_ERROR_PROTOCOL_DATA_TOO_LARGE);
+		return debugErrorAndReturn("translateLanExecution", TUXP_ERROR_PROTOCOL_DATA_TOO_LARGE);
 
 	uint8_t leBuff[MAX_SIZE_PROTOCOL_DATA];
 	int position = 0;
@@ -779,7 +779,7 @@ int translateLanExecution(TinyId requestId, Protocol *action, ProtocolData *pDat
 	
 	pData->data = malloc(sizeof(uint8_t) * (position + 1));
 	if (!pData->data)
-		return TACP_ERROR_OUT_OF_MEMEORY;
+		return TUXP_ERROR_OUT_OF_MEMEORY;
 
 	memcpy(pData->data, leBuff, (position + 1));
 	pData->dataSize = position + 1;
@@ -912,15 +912,15 @@ bool isLanExecution(ProtocolData *pData) {
 
 int parseLanAnswer(ProtocolData *pData, LanAnswer *answer) {
 	if(!isLanAnswer(pData))
-		return debugErrorAndReturn("parseLanAnswer", TACP_ERROR_MALFORMED_PROTOCOL_DATA);
+		return debugErrorAndReturn("parseLanAnswer", TUXP_ERROR_MALFORMED_PROTOCOL_DATA);
 
 	int position = SIZE_LAN_ANSWER_PREFIX_BYTES;
 	if (pData->data[position] != 0x06)
-		return debugErrorAndReturn("parseLanAnswer", TACP_ERROR_MALFORMED_PROTOCOL_DATA);
+		return debugErrorAndReturn("parseLanAnswer", TUXP_ERROR_MALFORMED_PROTOCOL_DATA);
 
 	position++;
 	if(pData->data[position] != FLAG_BYTES_TYPE)
-		return debugErrorAndReturn("parseLanAnswer", TACP_ERROR_MALFORMED_PROTOCOL_DATA);
+		return debugErrorAndReturn("parseLanAnswer", TUXP_ERROR_MALFORMED_PROTOCOL_DATA);
 
 	position++;
 	int traceIdEndPosition = -1;
@@ -932,21 +932,21 @@ int parseLanAnswer(ProtocolData *pData, LanAnswer *answer) {
 	}
 
 	if (traceIdEndPosition == -1)
-		return debugErrorAndReturn("parseLanAnswer", TACP_ERROR_MALFORMED_PROTOCOL_DATA);
+		return debugErrorAndReturn("parseLanAnswer", TUXP_ERROR_MALFORMED_PROTOCOL_DATA);
 
 	ProtocolData traceId;
 	int unescapeResult = unescape(pData->data + position, traceIdEndPosition - position, &traceId);
 	if (unescapeResult != 0)
-		return debugErrorDetailAndReturn("parseLanAnswer", TACP_ERROR_FAILED_TO_UNESCAPE, unescapeResult);
+		return debugErrorDetailAndReturn("parseLanAnswer", TUXP_ERROR_FAILED_TO_UNESCAPE, unescapeResult);
 
 	if (traceId.dataSize != SIZE_THINGS_TINY_ID)
-		return debugErrorAndReturn("parseLanAnswer", TACP_ERROR_FAILED_TO_UNESCAPE);
+		return debugErrorAndReturn("parseLanAnswer", TUXP_ERROR_FAILED_TO_UNESCAPE);
 
 	memcpy(answer->traceId, traceId.data, SIZE_THINGS_TINY_ID);
 
 	if (isResponseTinyId(answer->traceId)) {
 		if (pData->data[traceIdEndPosition] != FLAG_DOC_BEGINNING_END)
-			return debugErrorAndReturn("parseLanAnswer", TACP_ERROR_MALFORMED_PROTOCOL_DATA);
+			return debugErrorAndReturn("parseLanAnswer", TUXP_ERROR_MALFORMED_PROTOCOL_DATA);
 
 		answer->errorNumber = 0;
 
@@ -954,18 +954,18 @@ int parseLanAnswer(ProtocolData *pData, LanAnswer *answer) {
 	}
 
 	if(!isErrorTinyId(answer->traceId))
-		return debugErrorAndReturn("parseLanAnswer", TACP_ERROR_UNKNOWN_ANSWER_TINY_ID_TYPE);
+		return debugErrorAndReturn("parseLanAnswer", TUXP_ERROR_UNKNOWN_ANSWER_TINY_ID_TYPE);
 
 	position = traceIdEndPosition;
 	if(pData->data[position] != FLAG_UNIT_SPLITTER)
-		return debugErrorAndReturn("parseLanAnswer", TACP_ERROR_MALFORMED_PROTOCOL_DATA);
+		return debugErrorAndReturn("parseLanAnswer", TUXP_ERROR_MALFORMED_PROTOCOL_DATA);
 
 	if (position + 1 + 1 + 1 > (pData->dataSize - 1))
-		return debugErrorAndReturn("parseLanAnswer", TACP_ERROR_MALFORMED_PROTOCOL_DATA);
+		return debugErrorAndReturn("parseLanAnswer", TUXP_ERROR_MALFORMED_PROTOCOL_DATA);
 
 	position++;
 	if (pData->data[position] != 0x08)
-		return debugErrorAndReturn("parseLanAnswer", TACP_ERROR_MALFORMED_PROTOCOL_DATA);
+		return debugErrorAndReturn("parseLanAnswer", TUXP_ERROR_MALFORMED_PROTOCOL_DATA);
 
 	position++;
 	int LengthOfErrorNumber = pData->dataSize - position - 1;
@@ -976,7 +976,7 @@ int parseLanAnswer(ProtocolData *pData, LanAnswer *answer) {
 	position += LengthOfErrorNumber;
 
 	if (pData->data[position] != FLAG_DOC_BEGINNING_END)
-		return debugErrorAndReturn("parseLanAnswer",TACP_ERROR_MALFORMED_PROTOCOL_DATA);
+		return debugErrorAndReturn("parseLanAnswer",TUXP_ERROR_MALFORMED_PROTOCOL_DATA);
 	
 	return 0;
 }
@@ -1001,7 +1001,7 @@ int translateLanResonse(LanAnswer *answer, ProtocolData *pData, ProtocolData *es
 	int dataSize = position + 1;
 	pData->data = malloc(sizeof(uint8_t) * dataSize);
 	if(!pData->data)
-		return debugErrorAndReturn("translateLanResonse", TACP_ERROR_OUT_OF_MEMEORY);
+		return debugErrorAndReturn("translateLanResonse", TUXP_ERROR_OUT_OF_MEMEORY);
 
 	memcpy(pData->data, buff, dataSize);
 	pData->dataSize = dataSize;
@@ -1042,7 +1042,7 @@ int translateLanError(LanAnswer *answer, ProtocolData *pData, ProtocolData *esca
 	int dataSize = position + 1;
 	pData->data = malloc(sizeof(uint8_t) * dataSize);
 	if(!pData->data)
-		return debugErrorAndReturn("translateLanError", TACP_ERROR_OUT_OF_MEMEORY);
+		return debugErrorAndReturn("translateLanError", TUXP_ERROR_OUT_OF_MEMEORY);
 
 	memcpy(pData->data, buff, dataSize);
 	pData->dataSize = dataSize;
@@ -1055,7 +1055,7 @@ int translateLanAnswer(LanAnswer *answer, ProtocolData *pData) {
 	int escapeResult = escape(answer->traceId, SIZE_THINGS_TINY_ID, &escapedTraceId);
 	if (escapeResult != 0) {
 		releaseProtocolData(&escapedTraceId);
-		return debugErrorDetailAndReturn("translateLanAnswer", TACP_ERROR_FAILED_TO_ESCAPE, escapeResult);
+		return debugErrorDetailAndReturn("translateLanAnswer", TUXP_ERROR_FAILED_TO_ESCAPE, escapeResult);
 	}
 
 	int result;
@@ -1065,13 +1065,13 @@ int translateLanAnswer(LanAnswer *answer, ProtocolData *pData) {
 		result = translateLanError(answer, pData, &escapedTraceId);
 	} else {
 		releaseProtocolData(&escapedTraceId);
-		return debugErrorAndReturn("translateLanAnswer", TACP_ERROR_UNKNOWN_ANSWER_TINY_ID_TYPE);
+		return debugErrorAndReturn("translateLanAnswer", TUXP_ERROR_UNKNOWN_ANSWER_TINY_ID_TYPE);
 	}
 	releaseProtocolData(&escapedTraceId);
 
 	if (result != 0) {
 		releaseProtocolData(pData);
-		return debugErrorAndReturn("translateLanAnswer", TACP_ERROR_FAILED_TO_TRANSLATE_ANSWER);
+		return debugErrorAndReturn("translateLanAnswer", TUXP_ERROR_FAILED_TO_TRANSLATE_ANSWER);
 	}
 
 	return 0;
@@ -1085,14 +1085,14 @@ int parseLanExecution(ProtocolData *pData, TinyId requestId, Protocol *action) {
 #endif
 
 	if(!isLanExecution(pData) || pData->dataSize < MIN_SIZE_LAN_EXECUTION_DATA)
-		return debugErrorAndReturn("parseLanExecution", TACP_ERROR_MALFORMED_PROTOCOL_DATA);
+		return debugErrorAndReturn("parseLanExecution", TUXP_ERROR_MALFORMED_PROTOCOL_DATA);
 
 	uint8_t attributeSize = pData->data[4];
 	uint8_t childrenSize = pData->data[5] & 0x7f;
 	bool hasText = (pData->data[5] & 0x80) == 0x80;
 
 	if (attributeSize != 1 || childrenSize != 1 || hasText)
-		return debugErrorAndReturn("parseLanExecution", TACP_ERROR_MALFORMED_PROTOCOL_DATA);
+		return debugErrorAndReturn("parseLanExecution", TUXP_ERROR_MALFORMED_PROTOCOL_DATA);
 
 	int requestIdStartPosition = 1 + 5 + 1 + 1;
 	memcpy(requestId, pData->data + requestIdStartPosition, SIZE_THINGS_TINY_ID);
@@ -1120,20 +1120,20 @@ int translateLanNotification(TinyId requestId, Protocol *event, bool ackRequired
 	if(result != 0) {
 		releaseProtocolData(&pDataEvent);
 		return debugErrorDetailAndReturn("translateLanNotification",
-			TACP_ERROR_FAILED_TO_TRANSLATE_PROTOCOL, result);
+			TUXP_ERROR_FAILED_TO_TRANSLATE_PROTOCOL, result);
 	}
 
 	ProtocolData pDataEscapedTinyId;
 	int escapeResult = escape(requestId, SIZE_THINGS_TINY_ID, &pDataEscapedTinyId);
 	if(escapeResult != 0) {
 		releaseProtocolData(&pDataEscapedTinyId);
-		return debugErrorDetailAndReturn("translateLanNotification", TACP_ERROR_FAILED_TO_ESCAPE, escapeResult);
+		return debugErrorDetailAndReturn("translateLanNotification", TUXP_ERROR_FAILED_TO_ESCAPE, escapeResult);
 	}
 
 	int pDataEventSize = pDataEvent.dataSize - 2;
 	int lanNotificationSize = MIN_SIZE_PROTOCOL_DATA + 3 + pDataEscapedTinyId.dataSize + pDataEventSize;
 	if(lanNotificationSize > MAX_SIZE_PROTOCOL_DATA)
-		return debugErrorAndReturn("translateLanNotification", TACP_ERROR_PROTOCOL_DATA_TOO_LARGE);
+		return debugErrorAndReturn("translateLanNotification", TUXP_ERROR_PROTOCOL_DATA_TOO_LARGE);
 
 	uint8_t lnBuff[MAX_SIZE_PROTOCOL_DATA];
 	int position = 0;
@@ -1171,7 +1171,7 @@ int translateLanNotification(TinyId requestId, Protocol *event, bool ackRequired
 
 	pData->data = malloc(sizeof(uint8_t) * (position + 1));
 	if(!pData->data)
-		return TACP_ERROR_OUT_OF_MEMEORY;
+		return TUXP_ERROR_OUT_OF_MEMEORY;
 
 	memcpy(pData->data, lnBuff, (position + 1));
 	pData->dataSize = position + 1;
@@ -1185,20 +1185,20 @@ int translateLanReport(TinyId requestId, Protocol *data, bool ackRequired, Proto
 	if(result != 0) {
 		releaseProtocolData(&pDataData);
 		return debugErrorDetailAndReturn("translateLanReport",
-			TACP_ERROR_FAILED_TO_TRANSLATE_PROTOCOL, result);
+			TUXP_ERROR_FAILED_TO_TRANSLATE_PROTOCOL, result);
 	}
 
 	ProtocolData pDataEscapedTinyId;
 	int escapeResult = escape(requestId, SIZE_THINGS_TINY_ID, &pDataEscapedTinyId);
 	if(escapeResult != 0) {
 		releaseProtocolData(&pDataEscapedTinyId);
-		return debugErrorDetailAndReturn("translateLanReport", TACP_ERROR_FAILED_TO_ESCAPE, escapeResult);
+		return debugErrorDetailAndReturn("translateLanReport", TUXP_ERROR_FAILED_TO_ESCAPE, escapeResult);
 	}
 
 	int pDataDataSize = pDataData.dataSize - 2;
 	int lanReportSize = MIN_SIZE_PROTOCOL_DATA + 3 + pDataEscapedTinyId.dataSize + pDataDataSize;
 	if(lanReportSize > MAX_SIZE_PROTOCOL_DATA)
-		return debugErrorAndReturn("translateLanReport", TACP_ERROR_PROTOCOL_DATA_TOO_LARGE);
+		return debugErrorAndReturn("translateLanReport", TUXP_ERROR_PROTOCOL_DATA_TOO_LARGE);
 
 	uint8_t lrBuff[MAX_SIZE_PROTOCOL_DATA];
 	int position = 0;
@@ -1236,7 +1236,7 @@ int translateLanReport(TinyId requestId, Protocol *data, bool ackRequired, Proto
 
 	pData->data = malloc(sizeof(uint8_t) * (position + 1));
 	if(!pData->data)
-		return TACP_ERROR_OUT_OF_MEMEORY;
+		return TUXP_ERROR_OUT_OF_MEMEORY;
 
 	memcpy(pData->data, lrBuff, (position + 1));
 	pData->dataSize = position + 1;

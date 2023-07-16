@@ -21,5 +21,5 @@ endif()
 
 enable_testing()
 
-add_subdirectory(tacp)
+add_subdirectory(tuxp)
 add_subdirectory(thing)

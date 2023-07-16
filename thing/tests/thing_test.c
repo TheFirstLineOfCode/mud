@@ -3,14 +3,14 @@
 #include "unity.h"
 
 #include "debug.h"
-#include "tacp.h"
+#include "tuxp.h"
 #include "thing.h"
 
 static const ProtocolName NAME_PROTOCOL_FLASH = {{0xf7, 0x01}, 0x00};
 #define NAME_ATTRIBUTE_REPEAT_PROTOCOL_FLASH 0x01
 
 static const char *thingId = "SL-LE01-C980AFE9";
-static ThingInfo thingInfoInStorage = {NULL, NONE, NULL, NULL, NULL};
+static ThingInfo thingInfoInStorage = {NULL, NONE, -1, -1, 0xff, 0xff, NULL};
 static int resetTimes = 0;
 static DacState dacState = INITIAL;
 static const uint8_t dacServiceAddress[] = {0xef, 0xef, 0x1f};
@@ -35,6 +35,10 @@ bool initializeRadioImpl(RadioAddress address) {
 
 char *generateThingIdImpl() {
 	return "SL-LE01-C980AFE9";
+}
+
+char *loadRegistrationCodeImpl() {
+	return "abcdefghijkl";
 }
 
 bool configureRadioImpl() {
@@ -64,16 +68,20 @@ void configureThingProtocolsImpl() {
 void loadThingInfoImpl(ThingInfo *thingInfo) {
 	thingInfo->thingId = thingInfoInStorage.thingId;
 	thingInfo->dacState = thingInfoInStorage.dacState;
+	thingInfo->uplinkChannelBegin = thingInfoInStorage.uplinkChannelBegin;
+	thingInfo->uplinkChannelEnd = thingInfoInStorage.uplinkChannelEnd;
+	thingInfo->uplinkAddressHighByte = thingInfoInStorage.uplinkAddressHighByte;
+	thingInfo->uplinkAddressLowByte = thingInfoInStorage.uplinkAddressLowByte;
 	thingInfo->address = thingInfoInStorage.address;
-	thingInfo->gatewayUplinkAddress = thingInfoInStorage.gatewayUplinkAddress;
-	thingInfo->gatewayDownlinkAddress = thingInfoInStorage.gatewayDownlinkAddress;
 }
 
 void saveThingInfoImpl(ThingInfo *thingInfo) {
 	thingInfoInStorage.thingId = thingInfo->thingId;
 	thingInfoInStorage.address = thingInfo->address;
-	thingInfoInStorage.gatewayUplinkAddress = thingInfo->gatewayUplinkAddress;
-	thingInfoInStorage.gatewayDownlinkAddress = thingInfo->gatewayDownlinkAddress;
+	thingInfoInStorage.uplinkChannelBegin = thingInfo->uplinkChannelBegin;
+	thingInfoInStorage.uplinkChannelEnd = thingInfo->uplinkChannelEnd;
+	thingInfoInStorage.uplinkAddressHighByte = thingInfo->uplinkAddressHighByte;
+	thingInfoInStorage.uplinkAddressLowByte = thingInfo->uplinkAddressLowByte;
 	thingInfoInStorage.dacState = thingInfo->dacState;
 }
 
@@ -95,12 +103,12 @@ void sendToGatewayMock1(uint8_t address[], uint8_t data[], int dataSize) {
 		TEST_ASSERT_EQUAL_UINT8_ARRAY(expectedIntroductionData, data, dataSize);
 
 		ProtocolData pDataIntroduction = {data, dataSize};
-		TEST_ASSERT_TRUE(isProtocol(&pDataIntroduction, NAME_TACP_PROTOCOL_INTRODUCTION));
+		TEST_ASSERT_TRUE(isProtocol(&pDataIntroduction, NAME_TUXP_PROTOCOL_INTRODUCTION));
 		
 		Protocol introduction = createEmptyProtocol();
 		TEST_ASSERT_EQUAL_INT(0, parseProtocol(&pDataIntroduction, &introduction));
 		
-		uint8_t *actualAddress = getBytesAttributeValue(&introduction, NAME_ATTRIBUTE_ADDRESS_TACP_PROTOCOL_INTRODUCTION);
+		uint8_t *actualAddress = getBytesAttributeValue(&introduction, NAME_ATTRIBUTE_ADDRESS_TUXP_PROTOCOL_INTRODUCTION);
 		TEST_ASSERT_NOT_NULL(actualAddress);
 		TEST_ASSERT_EQUAL_UINT8(0x03, actualAddress[0]);
 		TEST_ASSERT_EQUAL_UINT8_ARRAY(dacClientAddress, actualAddress + 1, 3);
@@ -108,19 +116,19 @@ void sendToGatewayMock1(uint8_t address[], uint8_t data[], int dataSize) {
 		char *text = getText(&introduction);
 		TEST_ASSERT_EQUAL_CHAR_ARRAY(thingId, text, strlen(thingId));
 
-		Protocol allocation = createProtocol(NAME_TACP_PROTOCOL_ALLOCATION);
+		Protocol allocation = createProtocol(NAME_TUXP_PROTOCOL_ALLOCATION);
 
 		uint8_t gatewayUplinkAddress[] = {0x00, 0xef, 0x17};
-		addBytesAttribute(&allocation,
-			NAME_ATTRIBUTE_GATEWAY_UPLINK_ADDRESS_TACP_PROTOCOL_ALLOCATION, gatewayUplinkAddress, 3);
-
-		uint8_t gatewayDownlinkAddress[] = {0x00, 0x00, 0x17};
-		addBytesAttribute(&allocation,
-			NAME_ATTRIBUTE_GATEWAY_DOWNLINK_ADDRESS_TACP_PROTOCOL_ALLOCATION, gatewayDownlinkAddress, 3);
+		addIntAttribute(&allocation,
+			NAME_ATTRIBUTE_UPLINK_CHANNEL_BEGIN_TUXP_PROTOCOL_ALLOCATION, 0);
+		addIntAttribute(&allocation,
+			NAME_ATTRIBUTE_UPLINK_CHANNEL_END_TUXP_PROTOCOL_ALLOCATION, 0);
+		addByteAttribute(&allocation, NAME_ATTRIBUTE_UPLINK_ADDRESS_HIGH_BYTE_TUXP_PROTOCOL_ALLOCATION, 0);
+		addByteAttribute(&allocation,NAME_ATTRIBUTE_UPLINK_ADDRESS_LOW_BYTE_TUXP_PROTOCOL_ALLOCATION, 0);
 
 		uint8_t allocatedAddress[] = {0x00, 0x01, 0x17};
 		addBytesAttribute(&allocation,
-			NAME_ATTRIBUTE_ALLOCATED_ADDRESS_TACP_PROTOCOL_ALLOCATION, allocatedAddress, 3);
+			NAME_ATTRIBUTE_ALLOCATED_ADDRESS_TUXP_PROTOCOL_ALLOCATION, allocatedAddress, 3);
 
 		ProtocolData pDataAllocation;
 		TEST_ASSERT_EQUAL_INT(0, translateAndRelease(&allocation, &pDataAllocation));
@@ -131,7 +139,7 @@ void sendToGatewayMock1(uint8_t address[], uint8_t data[], int dataSize) {
 		releaseProtocolData(&pDataAllocation);
 	} else if (dacState == ALLOCATING) {
 		ProtocolData pDataAllocated = {data, dataSize};
-		TEST_ASSERT_TRUE(isProtocol(&pDataAllocated, NAME_TACP_PROTOCOL_ALLOCATED));
+		TEST_ASSERT_TRUE(isProtocol(&pDataAllocated, NAME_TUXP_PROTOCOL_ALLOCATED));
 
 		Protocol allocated = createEmptyProtocol();
 		TEST_ASSERT_EQUAL_INT(0, parseProtocol(&pDataAllocated, &allocated));
@@ -146,19 +154,19 @@ void sendToGatewayMock2(uint8_t address[], uint8_t data[], int dataSize) {
 	TEST_ASSERT_EQUAL_UINT8_ARRAY(dacClientAddress, nodeAddress, 3);
 
 	ProtocolData pDataIsConfigured = {data, dataSize};
-	TEST_ASSERT_TRUE(isProtocol(&pDataIsConfigured, NAME_TACP_PROTOCOL_IS_CONFIGURED));
+	TEST_ASSERT_TRUE(isProtocol(&pDataIsConfigured, NAME_TUXP_PROTOCOL_IS_CONFIGURED));
 
 	Protocol isConfigured = createEmptyProtocol();
 	TEST_ASSERT_EQUAL_INT(0, parseProtocol(&pDataIsConfigured, &isConfigured));
 
-	uint8_t *nodeAddress = getBytesAttributeValue(&isConfigured, NAME_ATTRIBUTE_ADDRESS_TACP_PROTOCOL_IS_CONFIGURED);
+	uint8_t *nodeAddress = getBytesAttributeValue(&isConfigured, NAME_ATTRIBUTE_ADDRESS_TUXP_PROTOCOL_IS_CONFIGURED);
 	uint8_t expectedNodeAddress[] = {0x03, 0xef, 0xee, 0x1f};
 	TEST_ASSERT_EQUAL_UINT8_ARRAY(expectedNodeAddress, nodeAddress, 4);
 
 	char *nodeThingId = getText(&isConfigured);
 	TEST_ASSERT_EQUAL_CHAR_ARRAY(thingId, nodeThingId, strlen(thingId));
 
-	Protocol notConfigured = createProtocol(NAME_TACP_PROTOCOL_NOT_CONFIGURED);
+	Protocol notConfigured = createProtocol(NAME_TUXP_PROTOCOL_NOT_CONFIGURED);
 	ProtocolData pDataNotConfigured;
 	TEST_ASSERT_EQUAL_INT(0,translateAndRelease(&notConfigured, &pDataNotConfigured));
 
@@ -174,7 +182,7 @@ void sendToGatewayMock3(uint8_t address[], uint8_t data[], int dataSize) {
 
 	sendToGatewayMock1(address, data, dataSize);
 	if(dacState == ALLOCATING) {
-		Protocol configured = createProtocol(NAME_TACP_PROTOCOL_CONFIGURED);
+		Protocol configured = createProtocol(NAME_TUXP_PROTOCOL_CONFIGURED);
 
 		ProtocolData pDataConfigured;
 		TEST_ASSERT_EQUAL_INT(0, translateAndRelease(&configured, &pDataConfigured));
@@ -215,6 +223,7 @@ int receiveRadioDataImpl(uint8_t buffer[], int bufferSize) {
 void registerThingHooks() {
 	registerRadioInitializer(initializeRadioImpl);
 	registerThingIdGenerator(generateThingIdImpl);
+	registerThingIdGenerator(loadRegistrationCodeImpl);
 	registerRadioConfigurer(configureRadioImpl);
 	registerRadioAddressChanger(changeRadioAddressImpl);
 	registerThingInfoLoader(loadThingInfoImpl);
@@ -271,19 +280,22 @@ void testLoraDacAllocated() {
 	loadThingInfoImpl(&thingInfo);
 
 	TEST_ASSERT_EQUAL_INT(NONE, thingInfo.dacState);
+	TEST_ASSERT_EQUAL_INT(-1, thingInfo.uplinkChannelBegin);
+	TEST_ASSERT_EQUAL_INT(-1,thingInfo.uplinkChannelEnd);
+	TEST_ASSERT_EQUAL_INT8(0xff, thingInfo.uplinkAddressHighByte);
+	TEST_ASSERT_EQUAL_INT8(0xff, thingInfo.uplinkAddressLowByte);
 	TEST_ASSERT_NULL(thingInfo.address);
-	TEST_ASSERT_NULL(thingInfo.gatewayUplinkAddress);
-	TEST_ASSERT_NULL(thingInfo.gatewayDownlinkAddress);
 
 	TEST_ASSERT_EQUAL(0, toBeAThing());
 
 	loadThingInfoImpl(&thingInfo);
 	TEST_ASSERT_EQUAL_INT(ALLOCATED, thingInfo.dacState);
 
-	uint8_t expectedGatewayUplinkAddress[] = {0x00, 0xef, 0x17};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expectedGatewayUplinkAddress, thingInfo.gatewayUplinkAddress, 3);
-	uint8_t expectedGatewayDownlinkAddress[] = {0x00, 0x00, 0x17};
-	TEST_ASSERT_EQUAL_UINT8_ARRAY(expectedGatewayDownlinkAddress, thingInfo.gatewayDownlinkAddress, 3);
+	TEST_ASSERT_EQUAL_INT(0, thingInfo.uplinkChannelBegin);
+	TEST_ASSERT_EQUAL_INT(0, thingInfo.uplinkChannelEnd);
+	TEST_ASSERT_EQUAL_UINT8(0x00, thingInfo.uplinkAddressHighByte);
+	TEST_ASSERT_EQUAL_UINT8(0x00, thingInfo.uplinkAddressLowByte);
+
 	uint8_t expectedAddress[] = {0x00, 0x01, 0x17};
 	TEST_ASSERT_EQUAL_UINT8_ARRAY(expectedAddress, thingInfo.address, 3);
 
@@ -300,9 +312,11 @@ void testLoraDacNotConfigured() {
 	loadThingInfoImpl(&thingInfo);
 
 	TEST_ASSERT_EQUAL_INT(INITIAL, thingInfo.dacState);
+	TEST_ASSERT_EQUAL_INT(-1, thingInfo.uplinkChannelBegin);
+	TEST_ASSERT_EQUAL_INT(-1, thingInfo.uplinkChannelEnd);
+	TEST_ASSERT_EQUAL_UINT8(0xff, thingInfo.uplinkAddressHighByte);
+	TEST_ASSERT_EQUAL_UINT8(0xff,thingInfo.uplinkAddressLowByte);
 	TEST_ASSERT_NULL(thingInfo.address);
-	TEST_ASSERT_NULL(thingInfo.gatewayUplinkAddress);
-	TEST_ASSERT_NULL(thingInfo.gatewayDownlinkAddress);
 
 	TEST_ASSERT_EQUAL_UINT8_ARRAY(dacClientAddress, nodeAddress, 3);
 }
@@ -378,7 +392,7 @@ void testProcessFlashAction() {
 	memcpy(data, pData.data, pData.dataSize);
 	memcpy(data + pData.dataSize, pDataProtocolWithErrorAttribute.data, pDataProtocolWithErrorAttribute.dataSize);
 
-	TEST_ASSERT_EQUAL_UINT8(TACP_ERROR_WAITING_DATA, processReceivedData(data, pData.dataSize - 5));
+	TEST_ASSERT_EQUAL_UINT8(TUXP_ERROR_WAITING_DATA, processReceivedData(data, pData.dataSize - 5));
 	TEST_ASSERT_EQUAL_UINT8(0, processReceivedData(data + (pData.dataSize - 5), 10));
 	TEST_ASSERT_TRUE(flashProcessed);
 
