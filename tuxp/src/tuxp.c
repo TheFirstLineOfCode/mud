@@ -88,20 +88,24 @@ int addBytesAttribute(Protocol *protocol, uint8_t name, uint8_t bytes[], int siz
 int addStringAttribute(Protocol *protocol, uint8_t name, char string[]) {
 	if(protocol->text)
 		return debugErrorAndReturn("addStringAttribute", TUXP_ERROR_PROTOCOL_CHANGE_CLOSED);
-
-	int length = strlen(string);
-	if (length > MAX_SIZE_ATTRIBUTE_DATA)
+	
+	long strLength = strlen(string);
+	if (strLength > MAX_SIZE_ATTRIBUTE_DATA)
 		return debugErrorAndReturn("addStringAttribute", TUXP_ERROR_ATTRIBUTE_DATA_TOO_LARGE);
-		
+	
 	ProtocolAttribute *attribute = malloc(sizeof(ProtocolAttribute));
+	if (!attribute)
+		return debugErrorAndReturn("addStringAttribute", TUXP_ERROR_OUT_OF_MEMEORY);
+	
 	attribute->name = name;
 	attribute->dataType = TYPE_CHARS;
-
-	attribute->value.csValue = malloc((strlen(string) + 1) * sizeof(char));
+	
+	attribute->value.csValue = malloc((strLength + 1) * sizeof(char));
 	if (!attribute->value.csValue)
-		return debugErrorAndReturn("addStringAttribute", TUXP_ERROR_OUT_OF_MEMEORY);	
+		return debugErrorAndReturn("addStringAttribute", TUXP_ERROR_OUT_OF_MEMEORY);
+	
 	strcpy(attribute->value.csValue, string);
-
+	
 	addAttributeToProtocol(protocol, attribute);
 	return 0;
 }
@@ -682,7 +686,7 @@ int translateProtocol(Protocol *protocol, ProtocolData *pData) {
 			releaseProtocolData(&attributeData);
 			return debugErrorAndReturn("translateProtocol", TUXP_ERROR_PROTOCOL_DATA_TOO_LARGE);
 		}
-
+		
 		memcpy(buff + position, attributeData.data, attributeData.dataSize);
 		position += attributeData.dataSize;
 

@@ -1,4 +1,5 @@
 #include <string.h>
+#include <time.h>
 
 #include "unity.h"
 
@@ -16,7 +17,7 @@ static DacState dacState = INITIAL;
 static const uint8_t dacServiceAddress[] = {0xef, 0xef, 0x1f};
 static const uint8_t dacClientAddress[] = {0xef, 0xee, 0x1f};
 static const uint8_t configuredNodeAddress[] = {0x00, 0x01, 0x17};
-static const uint8_t gatewayUplinkAddress[] = {0x00, 0xef, 0x17};
+static const uint8_t gatewayUplinkAddress[] = {0x00, 0x00, 0x17};
 static uint8_t nodeAddress[] = {0x00, 0x00, 0x00};
 
 static bool flashProcessed = false;
@@ -33,7 +34,7 @@ bool initializeRadioImpl(RadioAddress address) {
 	return true;
 }
 
-char *generateThingIdImpl() {
+char *loadThingIdImpl() {
 	return "SL-LE01-C980AFE9";
 }
 
@@ -92,12 +93,13 @@ void sendToGatewayMock1(uint8_t address[], uint8_t data[], int dataSize) {
 	if (dacState == INITIAL) {
 		TEST_ASSERT_EQUAL_UINT8_ARRAY(dacServiceAddress, address, 3);
 
-		TEST_ASSERT_EQUAL_INT(29, dataSize);
-		uint8_t expectedIntroductionData[] = {
+		TEST_ASSERT_EQUAL_INT(43, dataSize);
+		uint8_t expectedIntroductionData[] ={
 			0xff,
-				0xf8, 0x03, 0x00, 0x01, 0x80,
-					0x01, 0xfb, 0xef, 0xee, 0x1f, 0xfe,
-					0x53, 0x4c, 0x2d, 0x4c, 0x45, 0x30, 0x31, 0x2d, 0x43, 0x39, 0x38, 0x30, 0x41, 0x46, 0x45, 0x39,
+				0xf8, 0x03, 0x00, 0x02, 0x80,
+					0x01, 0x53, 0x4c, 0x2d, 0x4c, 0x45, 0x30, 0x31, 0x2d, 0x43, 0x39, 0x38, 0x30, 0x41, 0x46, 0x45, 0x39, 0xfe,
+					0x02, 0xfb, 0xef, 0xee, 0x1f, 0xfe,
+					0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c,
 			0xff
 		};
 		TEST_ASSERT_EQUAL_UINT8_ARRAY(expectedIntroductionData, data, dataSize);
@@ -113,18 +115,25 @@ void sendToGatewayMock1(uint8_t address[], uint8_t data[], int dataSize) {
 		TEST_ASSERT_EQUAL_UINT8(0x03, actualAddress[0]);
 		TEST_ASSERT_EQUAL_UINT8_ARRAY(dacClientAddress, actualAddress + 1, 3);
 
-		char *text = getText(&introduction);
-		TEST_ASSERT_EQUAL_CHAR_ARRAY(thingId, text, strlen(thingId));
+		char *thingIdFromIntroduction = getStringAttributeValue(&introduction, 0x01);
+		if (!thingIdFromIntroduction)
+			TEST_FAIL_MESSAGE("Failed to get thing ID from introduction.");
+		TEST_ASSERT_EQUAL_CHAR_ARRAY(thingId, thingIdFromIntroduction, strlen(thingId));
+
+		char *registrationCode = getText(&introduction);
+		if (!registrationCode)
+			TEST_FAIL_MESSAGE("Failed to get registration code from introduction.");
+		TEST_ASSERT_EQUAL_CHAR_ARRAY("abcdefghijkl", registrationCode, 12);
 
 		Protocol allocation = createProtocol(NAME_TUXP_PROTOCOL_ALLOCATION);
 
-		uint8_t gatewayUplinkAddress[] = {0x00, 0xef, 0x17};
 		addIntAttribute(&allocation,
-			NAME_ATTRIBUTE_UPLINK_CHANNEL_BEGIN_TUXP_PROTOCOL_ALLOCATION, 0);
+			NAME_ATTRIBUTE_UPLINK_CHANNEL_BEGIN_TUXP_PROTOCOL_ALLOCATION, 0x17);
 		addIntAttribute(&allocation,
-			NAME_ATTRIBUTE_UPLINK_CHANNEL_END_TUXP_PROTOCOL_ALLOCATION, 0);
-		addByteAttribute(&allocation, NAME_ATTRIBUTE_UPLINK_ADDRESS_HIGH_BYTE_TUXP_PROTOCOL_ALLOCATION, 0);
-		addByteAttribute(&allocation,NAME_ATTRIBUTE_UPLINK_ADDRESS_LOW_BYTE_TUXP_PROTOCOL_ALLOCATION, 0);
+			NAME_ATTRIBUTE_UPLINK_CHANNEL_END_TUXP_PROTOCOL_ALLOCATION, 0x17);
+		uint8_t uplinkAddress[] = {0x00, 0x00};
+		addBytesAttribute(&allocation, NAME_ATTRIBUTE_UPLINK_ADDRESS_TUXP_PROTOCOL_ALLOCATION,
+			uplinkAddress, 2);
 
 		uint8_t allocatedAddress[] = {0x00, 0x01, 0x17};
 		addBytesAttribute(&allocation,
@@ -220,15 +229,23 @@ int receiveRadioDataImpl(uint8_t buffer[], int bufferSize) {
 	return 0;
 }
 
+long getTimeImpl() {
+	time_t current;
+	time(&current);
+
+	return current;
+}
+
 void registerThingHooks() {
 	registerRadioInitializer(initializeRadioImpl);
-	registerThingIdGenerator(generateThingIdImpl);
-	registerThingIdGenerator(loadRegistrationCodeImpl);
+	registerThingIdLoader(loadThingIdImpl);
+	registerRegistrationCodeLoader(loadRegistrationCodeImpl);
 	registerRadioConfigurer(configureRadioImpl);
 	registerRadioAddressChanger(changeRadioAddressImpl);
 	registerThingInfoLoader(loadThingInfoImpl);
 	registerThingInfoSaver(saveThingInfoImpl);
 	registerResetter(resetImpl);
+	registerTimer(getTimeImpl);
 	registerRadioDataReceiver(receiveRadioDataImpl);
 	registerThingProtocolsConfigurer(configureThingProtocolsImpl);
 }
@@ -291,8 +308,8 @@ void testLoraDacAllocated() {
 	loadThingInfoImpl(&thingInfo);
 	TEST_ASSERT_EQUAL_INT(ALLOCATED, thingInfo.dacState);
 
-	TEST_ASSERT_EQUAL_INT(0, thingInfo.uplinkChannelBegin);
-	TEST_ASSERT_EQUAL_INT(0, thingInfo.uplinkChannelEnd);
+	TEST_ASSERT_EQUAL_INT(23, thingInfo.uplinkChannelBegin);
+	TEST_ASSERT_EQUAL_INT(23, thingInfo.uplinkChannelEnd);
 	TEST_ASSERT_EQUAL_UINT8(0x00, thingInfo.uplinkAddressHighByte);
 	TEST_ASSERT_EQUAL_UINT8(0x00, thingInfo.uplinkAddressLowByte);
 

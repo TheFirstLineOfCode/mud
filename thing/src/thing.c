@@ -9,7 +9,7 @@
 static void (*reset)() = NULL;
 static long (*getTime)() = NULL;
 static bool (*initializeRadio)(RadioAddress) = NULL;
-static char *(*generateThingId)() = NULL;
+static char *(*loadThingId)() = NULL;
 static char *(*loadRegistrationCode)() = NULL;
 static bool (*configureRadio)() = NULL;
 static bool (*changeRadioAddress)(RadioAddress, bool) = NULL;
@@ -52,11 +52,11 @@ void registerRadioInitializer(bool (*_initializeRadio)(RadioAddress address)) {
 	initializeRadio = _initializeRadio;
 }
 
-void registerThingIdGenerator(char *(*_generateThingId)()) {
-	generateThingId = _generateThingId;
+void registerThingIdLoader(char *(*_loadThingId)()) {
+	loadThingId = _loadThingId;
 }
 
-void registerRegistrationLoader(char *(*_loadRegistrationCode)()) {
+void registerRegistrationCodeLoader(char *(*_loadRegistrationCode)()) {
 	loadRegistrationCode = _loadRegistrationCode;
 }
 
@@ -223,7 +223,7 @@ void unregisterThingHooks() {
 	initializeRadio = NULL;
 	configureRadio = NULL;
 	changeRadioAddress = NULL;
-	generateThingId = NULL;
+	loadThingId = NULL;
 	loadRegistrationCode = NULL;
 	loadThingInfo = NULL;
 	saveThingInfo = NULL;
@@ -233,7 +233,25 @@ void unregisterThingHooks() {
 }
 
 void chooseUplinkAddress(RadioAddress chosen) {
+	if (thingInfo.uplinkChannelBegin == thingInfo.uplinkChannelEnd) {
+		chosen[0] = thingInfo.uplinkAddressHighByte;
+		chosen[1] = thingInfo.uplinkAddressLowByte;
+		chosen[2] = thingInfo.uplinkChannelBegin;
 
+		return;
+	}
+
+	int uplinkChannels = (thingInfo.uplinkChannelEnd - thingInfo.uplinkChannelEnd) + 1;
+	int chosenChannelIndex;
+#ifdef ARDUINO
+	chosenChannelIndex = random(uplinkChannels);
+#else
+	srand((unsigned)getTime());
+	chosenChannelIndex = rand() % uplinkChannels;
+#endif
+	chosen[0] = thingInfo.uplinkAddressHighByte;
+	chosen[1] = thingInfo.uplinkAddressHighByte;
+	chosen[2] = thingInfo.uplinkChannelEnd + chosenChannelIndex;
 }
 
 void sendAndRelease(RadioAddress to, ProtocolData *pData) {
@@ -246,25 +264,24 @@ int introduce(char *thingId, char *registrationCode) {
 	Serial.println(F("enter introduce."));
 #else
 	DEBUG_OUT("enter introduce.");
-#endif
-
+#endif	
 	Protocol introduction = createProtocol(NAME_TUXP_PROTOCOL_INTRODUCTION);
-
+	
 	if(addStringAttribute(&introduction, NAME_ATTRIBUTE_THING_ID_TUXP_PROTOCOL_INTRODUCTION,
 			thingId) != 0)
 		return THING_ERROR_SET_PROTOCOL_ATTRIBUTE;
-
+	
 	if (addBytesAttribute(&introduction, NAME_ATTRIBUTE_ADDRESS_TUXP_PROTOCOL_INTRODUCTION,
-			dacClientAddress,3) != 0)
+			dacClientAddress, 3) != 0)
 		return THING_ERROR_SET_PROTOCOL_ATTRIBUTE;
 
 	if (setText(&introduction, registrationCode) != 0)
 		return THING_ERROR_SET_PROTOCOL_TEXT;
-
+	
 	ProtocolData pData = {NULL, 0};
 	if (translateAndRelease(&introduction, &pData) != 0)
 		return THING_ERROR_PROTOCOL_TRANSLATION;
-
+	
 	thingInfo.dacState = INTRODUCTING;
 
 #if defined(ARDUINO) && defined(ENABLE_DEBUG)
@@ -272,7 +289,6 @@ int introduce(char *thingId, char *registrationCode) {
 #else
 	DEBUG_OUT("Sending introduction protocol to DAC service....");
 #endif
-	
 	sendAndRelease(dacServiceAddress, &pData);
 
 	return 0;
@@ -305,7 +321,7 @@ int isConfigured(char *thingId) {
 bool checkHooks() {
 	if (loadThingInfo == NULL ||
 			saveThingInfo == NULL ||
-			generateThingId == NULL ||
+			loadThingId == NULL ||
 			loadRegistrationCode == NULL ||
 			initializeRadio == NULL ||
 			configureRadio == NULL ||
@@ -406,7 +422,7 @@ int toBeAThing() {
 		return 0;
 	} else {
 		if (thingInfo.thingId == NULL) {
-			thingInfo.thingId = generateThingId();
+			thingInfo.thingId = loadThingId();
 
 			if(!configureRadio())
 				return debugErrorAndReturn("toBeAThing", THING_ERROR_CONFIGURE_RADIO);
@@ -622,12 +638,8 @@ int processAllocation(Protocol *allocation) {
 	if(!getIntAttributeValue(allocation, NAME_ATTRIBUTE_UPLINK_CHANNEL_END_TUXP_PROTOCOL_ALLOCATION, &uplinkChannelEnd))
 		return TUXP_ERROR_LACK_OF_ALLOCATION_PARAMETERS;
 
-	uint8_t uplinkAddressHighByte;
-	if (!getByteAttributeValue(allocation, NAME_ATTRIBUTE_UPLINK_ADDRESS_HIGH_BYTE_TUXP_PROTOCOL_ALLOCATION, uplinkAddressHighByte))
-		return TUXP_ERROR_LACK_OF_ALLOCATION_PARAMETERS;
-
-	uint8_t uplinkAddressLowByte;
-	if(!getByteAttributeValue(allocation, NAME_ATTRIBUTE_UPLINK_ADDRESS_LOW_BYTE_TUXP_PROTOCOL_ALLOCATION, uplinkAddressLowByte))
+	uint8_t *uplinkAddress = getBytesAttributeValue(allocation, NAME_ATTRIBUTE_UPLINK_ADDRESS_TUXP_PROTOCOL_ALLOCATION);
+	if (!uplinkAddress || uplinkAddress[0] != 0x02)
 		return TUXP_ERROR_LACK_OF_ALLOCATION_PARAMETERS;
 
 	uint8_t *allocatedAddress = getBytesAttributeValue(allocation, NAME_ATTRIBUTE_ALLOCATED_ADDRESS_TUXP_PROTOCOL_ALLOCATION);
@@ -638,7 +650,7 @@ int processAllocation(Protocol *allocation) {
 		return TUXP_ERROR_ILLEGAL_ALLOCATED_ADDRESS;
 
 	return allocated(uplinkChannelBegin, uplinkChannelEnd,
-		uplinkAddressHighByte, uplinkAddressLowByte, allocatedAddress);
+		uplinkAddress[1], uplinkAddress[2], allocatedAddress);
 }
 
 void processNotConfigured() {
