@@ -57,13 +57,13 @@ static const ProtocolName NAME_TUXP_PROTOCOL_ALLOCATION = {{0xf8, 0x03}, 0x03};
 #define NAME_ATTRIBUTE_UPLINK_ADDRESS_TUXP_PROTOCOL_ALLOCATION 0x06
 #define NAME_ATTRIBUTE_ALLOCATED_ADDRESS_TUXP_PROTOCOL_ALLOCATION 0x07
 
-static const ProtocolName NAME_TUXP_PROTOCOL_ALLOCATED = {{0xf8, 0x03}, 0x09};
-static const ProtocolName NAME_TUXP_PROTOCOL_CONFIGURED = {{0xf8, 0x03}, 0x0a};
+static const ProtocolName NAME_TUXP_PROTOCOL_ALLOCATED = {{0xf8, 0x03}, 0x08};
+static const ProtocolName NAME_TUXP_PROTOCOL_CONFIGURED = {{0xf8, 0x03}, 0x09};
 
-static const ProtocolName NAME_TUXP_PROTOCOL_IS_CONFIGURED = {{0xf8, 0x03}, 0x0b};
+static const ProtocolName NAME_TUXP_PROTOCOL_IS_CONFIGURED = {{0xf8, 0x03}, 0x0a};
 #define NAME_ATTRIBUTE_ADDRESS_TUXP_PROTOCOL_IS_CONFIGURED 0x02
 
-static const ProtocolName NAME_TUXP_PROTOCOL_NOT_CONFIGURED = {{0xf8, 0x03}, 0x0c};
+static const ProtocolName NAME_TUXP_PROTOCOL_NOT_CONFIGURED = {{0xf8, 0x03}, 0x0b};
 
 Protocol createEmptyProtocol();
 Protocol createProtocol(ProtocolName name);

@@ -83,7 +83,7 @@ void registerResetter(void (*reset)());
 void registerTimer(long (*getTime)());
 void registerRadioInitializer(bool (*initializeRadio)(RadioAddress address));
 void registerThingIdLoader(char *(*loadThingId)());
-void registerRegistrationCodeLoader(char *(*loadRegistrationCode()));
+void registerRegistrationCodeLoader(char *(*loadRegistrationCode)());
 void registerRadioConfigurer(bool (*configureRadio)());
 void registerRadioAddressChanger(bool (*changeRadioAddress)(RadioAddress address, bool savePersistently));
 void registerThingInfoLoader(void (*loadThingInfo)(ThingInfo *thingInfo));

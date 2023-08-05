@@ -3,6 +3,12 @@
 
 #include <stdbool.h>
 
+#if defined(ARDUINO)
+
+#include <Arduino.h>
+
+#endif
+
 #ifdef _WIN32
 
 #define ENABLE_DEBUG 1
