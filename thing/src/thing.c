@@ -2,8 +2,6 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "debug.h"
-#include "tuxp.h"
 #include "thing.h"
 
 static void (*reset)() = NULL;

@@ -3,8 +3,6 @@
 
 #include "unity.h"
 
-#include "debug.h"
-#include "tuxp.h"
 #include "thing.h"
 
 static const ProtocolName NAME_PROTOCOL_FLASH = {{0xf7, 0x01}, 0x00};

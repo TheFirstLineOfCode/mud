@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "things_tiny_id.h"
-#include "protocols.h"
+#include "debug.h"
+#include "tuxp.h"
 
 #define THING_ERROR_LACK_OF_HOOKS -1
 #define THING_ERROR_INITIALIZE_RADIO -2
