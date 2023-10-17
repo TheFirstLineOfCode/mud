@@ -23,7 +23,7 @@
 #define THING_ERROR_INVALID_DAC_STATE -14
 #define THING_ERROR_NOT_A_THING_YET -15
 #define THING_ERROR_PROCESS_RECEIVED_RADIO_DATA -16
-#define THING_ERROR_DO_DAQ -17
+#define THING_ERROR_DO_REPORT -17
 #define THING_ERROR_AQUIRE_DATA -18
 #define THING_ERROR_MAKE_TINY_ID -19
 
@@ -52,25 +52,25 @@ typedef struct ThingInfo {
 	uint8_t *address;
 } ThingInfo;
 
-typedef struct ActionProtocolRegistration {
+typedef struct ExecutionProtocolRegistration {
 	ProtocolName name;
-	int8_t (*processProtocol)(Protocol *);
+	int8_t (*executeAction)(Protocol *);
 	bool isQueryProtocol;
-	struct ActionProtocolRegistration *next;
-} ActionProtocolRegistration;
+	struct ExecutionProtocolRegistration *next;
+} ExecutionProtocolRegistration;
 
-typedef struct DataProtocolRegistration {
+typedef struct ReportProtocolRegistration {
 	ProtocolName name;
-	int8_t (*aquireData)(Protocol *);
+	int8_t (*acquireData)(Protocol *);
 	long samplingInterval;
-	struct DataProtocolRegistration *next;
-} DataProtocolRegistration;
+	struct ReportProtocolRegistration *next;
+} ReportProtocolRegistration;
 
-typedef struct DaqState {
+typedef struct ReportState {
 	ProtocolName name;
-	long lastDaqTime;
-	struct DaqState *next;
-} DaqState;
+	long lastReportTime;
+	struct ReportState *next;
+} ReportState;
 
 
 typedef struct LanNotificationAndRexInfo {
@@ -93,23 +93,21 @@ void registerRadioDataSender(void (*sendRadioData)(RadioAddress address, uint8_t
 void registerRadioDataReceiver(int (*receiveRadioData)(uint8_t buff[], int buffSize));
 void unregisterThingHooks();
 
-void registerActionProtocol(ProtocolName name,
-	int8_t (*processProtocol)(Protocol *), bool isQueryProtocol);
-bool unregisterActionProtocol(ProtocolName name);
-ActionProtocolRegistration *getActionProtocolRegistration(ProtocolName name);
+void registerExecutionProtocol(ProtocolName name,
+	int8_t (*executeAction)(Protocol *), bool isQueryProtocol);
+bool unregisterExecutionProtocol(ProtocolName name);
+ExecutionProtocolRegistration *getExecutionProtocolRegistration(ProtocolName name);
 
-void registerDataProtocol(ProtocolName name, int8_t (*acquireData)(Protocol *),
+void registerReportProtocol(ProtocolName name, int8_t (*reportData)(Protocol *),
 	long samplingInterval);
-bool unregisterDataProtocol(ProtocolName name);
-DaqState *getDaqState(ProtocolName name);
+bool unregisterReportProtocol(ProtocolName name);
+ReportState *getReportState(ProtocolName name);
 
 int toBeAThing();
 bool amIAThing();
 void resetThing();
 void getCurrentRadioAddress(RadioAddress address);
 uint8_t getLanId();
-int processReceivedData(uint8_t data[], int dataSize);
-int doDaq();
 void sendAndRelease(RadioAddress to, ProtocolData *pData);
 int notify(TinyId requestId, Protocol *event);
 int notifyWithAck(TinyId requestId, Protocol *event);

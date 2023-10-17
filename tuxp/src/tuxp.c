@@ -182,7 +182,7 @@ int addFloatAttribute(Protocol *protocol, uint8_t name, float fValue) {
 
 int addRbsAttribute(Protocol *protocol, uint8_t name, uint8_t rbsValue) {
 	if(protocol->text)
-		return debugErrorAndReturn("addByteAttribute", TUXP_ERROR_PROTOCOL_CHANGE_CLOSED);
+		return debugErrorAndReturn("addRbsAttribute", TUXP_ERROR_PROTOCOL_CHANGE_CLOSED);
 
 	ProtocolAttribute *attribute = malloc(sizeof(ProtocolAttribute));
 

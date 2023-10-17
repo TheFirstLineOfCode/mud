@@ -18,7 +18,7 @@ static const uint8_t configuredNodeAddress[] = {0x00, 0x01, 0x17};
 static const uint8_t gatewayUplinkAddress[] = {0x00, 0x00, 0x17};
 static uint8_t nodeAddress[] = {0x00, 0x00, 0x00};
 
-static bool flashProcessed = false;
+static bool flashExecuted = false;
 static int lanAnswerTimes = 0;
 
 void resetImpl() {}
@@ -44,12 +44,12 @@ bool configureRadioImpl() {
 	return true;
 }
 
-int8_t processFlash(Protocol *protocol) {
+int8_t executeFlash(Protocol *protocol) {
 	int repeat;
 	TEST_ASSERT_TRUE(getIntAttributeValue(protocol, NAME_ATTRIBUTE_REPEAT_PROTOCOL_FLASH, &repeat));
 
 	if (repeat == 5) {
-		flashProcessed = true;
+		flashExecuted = true;
 		return 0;
 	}
 	
@@ -61,7 +61,7 @@ int8_t processFlash(Protocol *protocol) {
 
 void configureThingProtocolsImpl() {
 	ProtocolName flashProtocolName = {{0xf7, 0x01}, 0x00};
-	registerActionProtocol(flashProtocolName, processFlash, false);
+	registerExecutionProtocol(flashProtocolName, executeFlash, false);
 }
 
 void loadThingInfoImpl(ThingInfo *thingInfo) {
@@ -282,7 +282,7 @@ void setUp() {
 		TEST_FAIL_MESSAGE(message);
 	}
 
-	flashProcessed = false;
+	flashExecuted = false;
 }
 
 void tearDown() {
@@ -349,7 +349,7 @@ void testLoraDacConfigured() {
 	TEST_ASSERT_EQUAL_UINT8_ARRAY(configuredNodeAddress, nodeAddress, 3);
 }
 
-void testProcessFlashAction() {
+void testExecuteFlashAction() {
 	ThingInfo thingInfo;
 	loadThingInfoImpl(&thingInfo);
 	TEST_ASSERT_EQUAL_INT(CONFIGURED, thingInfo.dacState);
@@ -409,7 +409,7 @@ void testProcessFlashAction() {
 
 	TEST_ASSERT_EQUAL_UINT8(TUXP_ERROR_WAITING_DATA, processReceivedData(data, pData.dataSize - 5));
 	TEST_ASSERT_EQUAL_UINT8(0, processReceivedData(data + (pData.dataSize - 5), 10));
-	TEST_ASSERT_TRUE(flashProcessed);
+	TEST_ASSERT_TRUE(flashExecuted);
 
 	TEST_ASSERT_EQUAL_UINT8(0, processReceivedData(data + (pData.dataSize + 5), pDataProtocolWithErrorAttribute.dataSize - 5));
 
@@ -423,7 +423,7 @@ int main() {
 	RUN_TEST(testLoraDacAllocated);
 	RUN_TEST(testLoraDacNotConfigured);
 	RUN_TEST(testLoraDacConfigured);
-	RUN_TEST(testProcessFlashAction);
+	RUN_TEST(testExecuteFlashAction);
 	
 	return UNITY_END();
 }

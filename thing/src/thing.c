@@ -26,11 +26,11 @@ static int messagesLength = 0;
 static const uint8_t dacServiceAddress[] = DAC_SERVICE_ADDRESS;
 static const uint8_t dacClientAddress[] = DAC_CLIENT_ADDRESS;
 
-static ActionProtocolRegistration *actionProtocolRegistrations = NULL;
+static ExecutionProtocolRegistration *executionProtocolRegistrations = NULL;
 static LanNotificationAndRexInfo *lanNotificationAndRexInfos = NULL;
 
-static DataProtocolRegistration *dataProtocolRegistrations = NULL;
-static DaqState *daqStates = NULL;
+static ReportProtocolRegistration *reportProtocolRegistrations = NULL;
+static ReportState *reportStates = NULL;
 
 #define DEFAULT_RADIO_DATA_RECEIVING_INTERVAL 1000
 
@@ -86,82 +86,32 @@ void registerRadioDataReceiver(int (*_receiveRadioData)(uint8_t buff[], int buff
 	receiveRadioData = _receiveRadioData;
 }
 
-void registerActionProtocol(ProtocolName name,
-			int8_t (*processProtocol)(Protocol *), bool isQueryProtocol) {
-	ActionProtocolRegistration *newestRegistration = malloc(sizeof(ActionProtocolRegistration));
+void registerExecutionProtocol(ProtocolName name,
+			int8_t (*executeAction)(Protocol *), bool isQueryProtocol) {
+	ExecutionProtocolRegistration *newestRegistration = malloc(sizeof(ExecutionProtocolRegistration));
 	newestRegistration->name = name;
-	newestRegistration->processProtocol = processProtocol;
+	newestRegistration->executeAction = executeAction;
 	newestRegistration->isQueryProtocol = isQueryProtocol;
 	newestRegistration->next = NULL;
 
-	if(actionProtocolRegistrations) {
-		ActionProtocolRegistration *last = actionProtocolRegistrations;
-		while(last->next) {
-			last = last->next;
-		}
-
-		last->next = newestRegistration;
-	}
-	else {
-		actionProtocolRegistrations = newestRegistration;
-	}
-}
-
-bool unregisterActionProtocol(ProtocolName name) {
-	if(!actionProtocolRegistrations)
-		return false;
-
-	ActionProtocolRegistration *current = actionProtocolRegistrations;
-	ActionProtocolRegistration *previous = NULL;
-	while(current) {
-		if(current->name.ns[0] != name.ns[0] ||
-			current->name.ns[1] != name.ns[1] ||
-			current->name.localName != name.localName) {
-			previous = current;
-			current = current->next;
-			continue;
-		}
-
-		if(previous) {
-			previous->next = current->next;
-		}
-		else {
-			actionProtocolRegistrations = current->next;
-		}
-
-		free(current);
-		return true;
-	}
-
-	return false;
-}
-
-void registerDataProtocol(ProtocolName name, int8_t (*acquireData)(Protocol *),
-			long samplingInterval) {
-	DataProtocolRegistration *newestRegistration = malloc(sizeof(DataProtocolRegistration));
-	newestRegistration->name = name;
-	newestRegistration->aquireData = acquireData;
-	newestRegistration->samplingInterval = samplingInterval;
-	newestRegistration->next = NULL;
-
-	if(dataProtocolRegistrations) {
-		DataProtocolRegistration *last = dataProtocolRegistrations;
+	if(executionProtocolRegistrations) {
+		ExecutionProtocolRegistration *last = executionProtocolRegistrations;
 		while(last->next) {
 			last = last->next;
 		}
 
 		last->next = newestRegistration;
 	} else {
-		dataProtocolRegistrations = newestRegistration;
+		executionProtocolRegistrations = newestRegistration;
 	}
 }
 
-bool unregisterDataProtocol(ProtocolName name) {
-	if(!dataProtocolRegistrations)
+bool unregisterExecutionProtocol(ProtocolName name) {
+	if(!executionProtocolRegistrations)
 		return false;
 
-	DataProtocolRegistration *current = dataProtocolRegistrations;
-	DataProtocolRegistration *previous = NULL;
+	ExecutionProtocolRegistration *current = executionProtocolRegistrations;
+	ExecutionProtocolRegistration *previous = NULL;
 	while(current) {
 		if(current->name.ns[0] != name.ns[0] ||
 			current->name.ns[1] != name.ns[1] ||
@@ -174,7 +124,7 @@ bool unregisterDataProtocol(ProtocolName name) {
 		if(previous) {
 			previous->next = current->next;
 		} else {
-			dataProtocolRegistrations = current->next;
+			executionProtocolRegistrations = current->next;
 		}
 
 		free(current);
@@ -184,17 +134,65 @@ bool unregisterDataProtocol(ProtocolName name) {
 	return false;
 }
 
-DaqState *getDaqState(ProtocolName name) {
-	if (!daqStates) {
-		DaqState *daqState = malloc(sizeof(DaqState));
-		daqState->name = name;
-		daqState->lastDaqTime = 0;
+void registerReportProtocol(ProtocolName name, int8_t (*aquireData)(Protocol *),
+			long samplingInterval) {
+	ReportProtocolRegistration *newestRegistration = malloc(sizeof(ReportProtocolRegistration));
+	newestRegistration->name = name;
+	newestRegistration->acquireData = aquireData;
+	newestRegistration->samplingInterval = samplingInterval;
+	newestRegistration->next = NULL;
 
-		daqStates = daqState;
+	if(reportProtocolRegistrations) {
+		ReportProtocolRegistration *last = reportProtocolRegistrations;
+		while(last->next) {
+			last = last->next;
+		}
 
-		return daqState;
+		last->next = newestRegistration;
 	} else {
-		DaqState *current = daqStates;
+		reportProtocolRegistrations = newestRegistration;
+	}
+}
+
+bool unregisterReportProtocol(ProtocolName name) {
+	if(!reportProtocolRegistrations)
+		return false;
+
+	ReportProtocolRegistration *current = reportProtocolRegistrations;
+	ReportProtocolRegistration *previous = NULL;
+	while(current) {
+		if(current->name.ns[0] != name.ns[0] ||
+			current->name.ns[1] != name.ns[1] ||
+			current->name.localName != name.localName) {
+			previous = current;
+			current = current->next;
+			continue;
+		}
+
+		if(previous) {
+			previous->next = current->next;
+		} else {
+			reportProtocolRegistrations = current->next;
+		}
+
+		free(current);
+		return true;
+	}
+
+	return false;
+}
+
+ReportState *getReportState(ProtocolName name) {
+	if (!reportStates) {
+		ReportState *reportState = malloc(sizeof(ReportState));
+		reportState->name = name;
+		reportState->lastReportTime = 0;
+
+		reportStates = reportState;
+
+		return reportState;
+	} else {
+		ReportState *current = reportStates;
 		while(true) {
 			if (current->name.ns[0] == name.ns[0] &&
 					current->name.ns[1] == name.ns[1] &&
@@ -207,12 +205,12 @@ DaqState *getDaqState(ProtocolName name) {
 				break;
 		}
 
-		DaqState *daqState = malloc(sizeof(DaqState));
-		daqState->name = name;
-		daqState->lastDaqTime = 0;
-		current->next = daqState;
+		ReportState *reportState = malloc(sizeof(ReportState));
+		reportState->name = name;
+		reportState->lastReportTime = 0;
+		current->next = reportState;
 
-		return daqState;
+		return reportState;
 	}
 }
 
@@ -511,18 +509,18 @@ int processProtocol(uint8_t data[], int size) {
 			return TUXP_ERROR_FAILED_TO_PARSE_PROTOCOL;
 		}
 
-		ActionProtocolRegistration *registration = getActionProtocolRegistration(action.name);
+		ExecutionProtocolRegistration *registration = getExecutionProtocolRegistration(action.name);
 		if(!registration) {
 			releaseProtocol(&action);
 		 	return TUXP_ERROR_UNKNOWN_PROTOCOL_NAME;
 		}
 
-		if(!registration->processProtocol) {
+		if(!registration->executeAction) {
 			releaseProtocol(&action);
 			return TUXP_ERROR_NO_REGISTRATED_PROCESSOR;
 		}
 
-		int8_t errorNumber = registration->processProtocol(&action);
+		int8_t errorNumber = registration->executeAction(&action);
 		releaseProtocol(&action);
 
 		if (registration->isQueryProtocol)
@@ -556,18 +554,18 @@ int processProtocol(uint8_t data[], int size) {
 			return result;
 		}
 
-		ActionProtocolRegistration *registration = getActionProtocolRegistration(protocol.name);
+		ExecutionProtocolRegistration *registration = getExecutionProtocolRegistration(protocol.name);
 		if (!registration) {
 			releaseProtocol(&protocol);
 			return TUXP_ERROR_UNKNOWN_PROTOCOL_NAME;
 		}
 
-		if (!registration->processProtocol) {
+		if (!registration->executeAction) {
 			releaseProtocol(&protocol);
 			return TUXP_ERROR_NO_REGISTRATED_PROCESSOR;
 		}
 
-		registration->processProtocol(&protocol);
+		registration->executeAction(&protocol);
 		releaseProtocol(&protocol);
 
 		return 0;
@@ -867,8 +865,8 @@ long getNextRexTime(int lanId, long elapsedTime) {
 }
 
 
-ActionProtocolRegistration *getActionProtocolRegistration(ProtocolName name) {
-	ActionProtocolRegistration *current = actionProtocolRegistrations;
+ExecutionProtocolRegistration *getExecutionProtocolRegistration(ProtocolName name) {
+	ExecutionProtocolRegistration *current = executionProtocolRegistrations;
 	while(current) {
 		if(current->name.ns[0] == name.ns[0] &&
 			current->name.ns[1] == name.ns[1] &&
@@ -903,34 +901,34 @@ int receiveAndProcessRadioData() {
 	return processReceivedData(receivedRadioData, receivedRadioDataSize);
 }
 
-int doDaq() {
-	if (!dataProtocolRegistrations)
+int doReport() {
+	if (!reportProtocolRegistrations)
 		return 0;
 
-	DataProtocolRegistration *current = dataProtocolRegistrations;
+	ReportProtocolRegistration *current = reportProtocolRegistrations;
 	while (current) {
-		DaqState *daqState = getDaqState(current->name);
+		ReportState *reportState = getReportState(current->name);
 
 		long currentTime = getTime();
-		if (daqState->lastDaqTime != 0 &&
-				(currentTime - daqState->lastDaqTime) < current->samplingInterval)
+		if (reportState->lastReportTime != 0 &&
+				(currentTime - reportState->lastReportTime) < current->samplingInterval)
 			continue;
 
-		Protocol protocol = createProtocol(current->name);
-		int result = current->aquireData(&protocol);
+		Protocol data = createProtocol(current->name);
+		int result = current->acquireData(&data);
 		if (result != 0) {
-			return debugErrorDetailAndReturn("doDaq", THING_ERROR_AQUIRE_DATA, result);
+			return debugErrorDetailAndReturn("doReport", THING_ERROR_AQUIRE_DATA, result);
 		}
 
-		daqState->lastDaqTime = currentTime;
+		reportState->lastReportTime = currentTime;
 
 		TinyId requestId;
 		result = makeTinyId(getLanId(), REQUEST, currentTime, requestId);
 		if(result != 0)
-			return debugErrorDetailAndReturn("doDaq", THING_ERROR_MAKE_TINY_ID, result);
+			return debugErrorDetailAndReturn("doReport", THING_ERROR_MAKE_TINY_ID, result);
 
-		report(requestId, &protocol);
-		releaseProtocol(&protocol);
+		report(requestId, &data);
+		releaseProtocol(&data);
 
 		current = current->next;
 	}
@@ -948,9 +946,9 @@ int doWorksAThingShouldDo() {
 	if (!amIAThing())
 		return 0;
 
-	result = doDaq();
+	result = doReport();
 	if(result != 0) {
-		return debugErrorDetailAndReturn("doWorksAThingShouldDo", THING_ERROR_DO_DAQ, result);
+		return debugErrorDetailAndReturn("doWorksAThingShouldDo", THING_ERROR_DO_REPORT, result);
 	}
 
 	return 0;
