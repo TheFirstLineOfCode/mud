@@ -98,7 +98,7 @@ void registerExecutionProtocol(ProtocolName name,
 bool unregisterExecutionProtocol(ProtocolName name);
 ExecutionProtocolRegistration *getExecutionProtocolRegistration(ProtocolName name);
 
-void registerReportProtocol(ProtocolName name, int8_t (*reportData)(Protocol *),
+void registerReportProtocol(ProtocolName name, int8_t (*aquireData)(Protocol *),
 	long samplingInterval);
 bool unregisterReportProtocol(ProtocolName name);
 ReportState *getReportState(ProtocolName name);
