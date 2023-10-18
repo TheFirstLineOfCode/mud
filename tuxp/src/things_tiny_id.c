@@ -84,7 +84,7 @@ bool isAnswerTinyIdOf(const TinyId answerId, const TinyId requestId) {
 	return requestIdHours == answerIdHours;
 }
 
-enum MessageType getMessageTypeFromTinyId(const TinyId tinyId) {
+MessageType getMessageTypeFromTinyId(const TinyId tinyId) {
 	int iType = (tinyId[1] & 0xff) >> 6;
 
 	if (iType == REQUEST)

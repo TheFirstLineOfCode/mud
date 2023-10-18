@@ -33,7 +33,7 @@
 
 typedef uint8_t RadioAddress[SIZE_RADIO_ADDRESS];
 
-typedef enum DacState {
+typedef enum {
 	NONE,
 	INITIAL,
 	INTRODUCTING,
@@ -42,7 +42,7 @@ typedef enum DacState {
 	CONFIGURED
 } DacState;
 
-typedef struct ThingInfo {
+typedef struct {
 	char *thingId;
 	DacState dacState;
 	int uplinkChannelBegin;
@@ -72,8 +72,7 @@ typedef struct ReportState {
 	struct ReportState *next;
 } ReportState;
 
-
-typedef struct LanNotificationAndRexInfo {
+typedef struct {
 	ProtocolData *lanNotificationData;
 	uint8_t rexTimes;
 	long nextRexTime;

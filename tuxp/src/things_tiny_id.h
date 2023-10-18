@@ -16,7 +16,7 @@
 
 typedef uint8_t TinyId[SIZE_THINGS_TINY_ID];
 
-typedef enum MessageType {
+typedef enum {
 	REQUEST = 0,
 	RESPONSE = 1,
 	ERROR = 2
@@ -24,7 +24,7 @@ typedef enum MessageType {
 
 int makeTinyId(uint8_t lanId, MessageType messageType,
 	uint32_t passedTimeThisDay, TinyId tinyId);
-enum MessageType getMessageTypeFromTinyId(const TinyId tinyId);
+MessageType getMessageTypeFromTinyId(const TinyId tinyId);
 uint8_t getLanIdFromTinyId(const TinyId tinyId);
 uint32_t getPassedTimeThisDayFromTinyId(const TinyId tinyId);
 bool isAnswerTinyIdOf(const TinyId answerId, const TinyId requestId);

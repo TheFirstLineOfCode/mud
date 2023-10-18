@@ -42,7 +42,7 @@
 #define MAX_SIZE_TEXT_DATA 32
 #define MAX_SIZE_ATTRIBUTES 8
 
-typedef struct LanAnwser {
+typedef struct {
 	TinyId traceId;
 	int8_t errorNumber;
 } LanAnswer;
