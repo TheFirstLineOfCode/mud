@@ -1,7 +1,7 @@
 #ifndef MUD_CONFIGURATION_H
 #define MUD_CONFIGURATION_H
 
-#define ENABLE_DEBUG 1
+// #define ENABLE_DEBUG 1
 
 // For my two Arduino Micro boards.
 #define ARDUINO_MICRO 1
